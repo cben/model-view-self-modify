@@ -1,3 +1,9 @@
+<style>
+  textarea.skipSelection::selection {
+    text-decoration: line-through;
+    background-color: grey;
+  }
+</style>
 <script type="module">
   // htm gives us JSX-like notation in standard JS tagged template literals.
   import {
@@ -9,9 +15,10 @@
 
   window.html = html
   // TODO: https://stackoverflow.com/questions/47978809/how-to-dynamically-execute-eval-javascript-code-that-contains-an-es6-module-re
-  // import { range } from 'https://unpkg.com/lodash-es'
-  import range from 'https://unpkg.com/lodash-es/range.js'
-  window.range = range
+  import _ from 'https://unpkg.com/lodash-es'
+  window._ = _
+  // import range from 'https://unpkg.com/lodash-es/range.js'
+  // window.range = range
 
   // --- https://stackoverflow.com/a/76452154/239657 ---
 
@@ -78,6 +85,7 @@
 
   var EditEvalRenderLoop = (props) => {
     const [code, setCode] = useState(localStorage.getItem('code') || demoCode)
+    const [selection, setSelection] = useState([0, 0])
     const [skipSelection, setSkipSelection] = useState(false)
 
     const onChange = (event) => {
@@ -86,20 +94,35 @@
       setCode(event.target.value)
     }
 
-    var edit = html`<textarea 
+    const onSelect = (event) => {
+      const range = [event.target.selectionStart, event.target.selectionEnd]
+      console.log('onSelect', ...range)
+      if (!_.isEqual(range, selection)) {
+        setSelection(range)
+      }
+    }
+
+    var edit = html`<textarea
       rows="40"
       cols="60"
       id="source"
       onInput=${onChange}
+      onSelect=${onSelect}
       value=${code}
+      className=${skipSelection && 'skipSelection '}
     />`
 
     window.App = () => '`App` not defined.' // TODO: tolerate App being undefined
 
+    const codeToRun = skipSelection
+      ? code.slice(0, selection[0]) + code.slice(selection[1])
+      : code
+
     let err = undefined
     let evalResult = undefined
     try {
-      evalResult = betterEvalFunction(code)
+      console.log('Evaluating...')
+      evalResult = betterEvalFunction(codeToRun)
     } catch (err2) {
       err = err2
     }
@@ -111,16 +134,22 @@
         <td>
           <label>
             <h3>App source:</h3>
-            <pre>${edit}</pre>
+            ${edit}
+            <div>
+              <input type="checkbox" name="skipSelection" accessKey="s" 
+                onClick=${event => { setSkipSelection(event.target.checked) }}
+              />
+              <label for="skipSelection">/* <u>s</u>election */</label>
+            </div>
           </label>
         </td>
         <td>
-          <h3>Code:</h3>
-          <pre style="max-height: 10ex; overflow: scroll;">${code}</pre>
+          <h3>Evaluated code:</h3>
+          <pre style="max-height: 10ex; overflow: scroll;">${codeToRun}</pre>
           <${DisplayResult}
             evalResult=${evalResult}
             err=${err}
-            key=${code /*force re-render after edit (TODO: reduce excessive remounts?)*/}
+            key=${codeToRun /*force ErrorBoundary reset after edit (TODO: reduce excessive remounts?)*/}
           />
         </td>
       </table>`

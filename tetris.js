@@ -20,9 +20,9 @@ var Cell = ({ rc, color }) =>
 
 var Board = ({ set }) => 
   html`<table>
-    ${range(0, h).map(r => 
+    ${_.range(0, h).map(r =>
       html`<tr>
-        ${range(0, w).map(c => {
+        ${_.range(0, w).map(c => {
           const rc = formatRC([r, c])
           const color = set.has(rc) ? 'blue' : 'white'
           return html`<${Cell} rc=${rc} color=${color}/>`
