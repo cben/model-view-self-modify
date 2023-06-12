@@ -1,0 +1,181 @@
+<script type="module">
+  // htm gives us JSX-like notation in standard JS tagged template literals.
+  import {
+    html, // bound to preact's createElement() constructor.
+    render, Component, useState
+  } from 'https://unpkg.com/htm/preact/standalone.module.js'
+
+  // -- Imports to be used by user code --
+
+  window.html = html
+  // TODO: https://stackoverflow.com/questions/47978809/how-to-dynamically-execute-eval-javascript-code-that-contains-an-es6-module-re
+  // import { range } from 'https://unpkg.com/lodash-es'
+  import range from 'https://unpkg.com/lodash-es/range.js'
+  window.range = range
+
+  // --- https://stackoverflow.com/a/76452154/239657 ---
+
+  // Firefox reports 1-based `lineNumber`, but also inserts `function anonymous(arg1, arg2` as line 1,
+  // and `) {` as line 2 (see .toString() on successfully parsed functions). Measure instead of guessing!
+  let functionSyntaxErrorLineOffset = 0
+  try {
+    Function('!@#$')
+  } catch (err) {
+    functionSyntaxErrorLineOffset = err.lineNumber
+  }
+
+  // Uses `Function` constructor rules: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/Function
+  //  - `code` should contain a `return` statement if you want a result.
+  //  - assignments without `var`/`let`/`const` do write to global namespace.
+  var betterEvalFunction = code => {
+    let parsedFunc
+    try {
+      parsedFunc = new Function(code)
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        // Goal: find & show responsible line directly in the message
+        const { name, message, lineNumber, columnNumber } = err
+        var lines = code.split('\n')
+
+        // Firefox, non-standard
+        if (lineNumber !== undefined) {
+          const line = lineNumber - functionSyntaxErrorLineOffset
+          throw SyntaxError(
+            `${message} (at ${line + 1}:${columnNumber}):\n` +
+            `${lines[line] || ''}\n` +
+            (columnNumber === undefined ? '' : `${' '.repeat(columnNumber)}^`))
+        }
+
+        // Other browsers leave you in the dark :-(
+        // ESTIMATE where it happened by slicing lines off the end until message disappears/changes
+        // (likely to have unclosed braces etc. — but assuming it reports the first of all errors)
+        var lastLine
+        for (lastLine = lines.length - 1; lastLine > 0; lastLine--) {
+          try {
+            new Function(lines.slice(0, lastLine).join('\n')) // only parse, don't call
+            // console.log('error disappeared')
+            break
+          } catch (err2) {
+            if (err2.message === err.message && err2 instanceof SyntaxError) {
+              continue
+            }
+            // console.log('error changed to:', err2.message)
+            break
+          }
+        }
+        throw SyntaxError(
+          `${err.message} (probably around line ${lastLine + 1}):\n` +
+          (lines[lastLine] || ''))
+      }
+      throw err
+    }
+    return parsedFunc()
+  }
+
+  // ---
+
+  var demoCode = 'App = (props) => html`<a href="/">Hello!</a>`'
+
+  var EditEvalRenderLoop = (props) => {
+    const [code, setCode] = useState(localStorage.getItem('code') || demoCode)
+    const [skipSelection, setSkipSelection] = useState(false)
+
+    const onChange = (event) => {
+      console.log('onChange')
+      localStorage.setItem('code', event.target.value)
+      setCode(event.target.value)
+    }
+
+    var edit = html`<textarea 
+      rows="40"
+      cols="60"
+      id="source"
+      onInput=${onChange}
+      value=${code}
+    />`
+
+    window.App = () => '`App` not defined.' // TODO: tolerate App being undefined
+
+    let err = undefined
+    let evalResult = undefined
+    try {
+      evalResult = betterEvalFunction(code)
+    } catch (err2) {
+      err = err2
+    }
+
+    // TODO: use https://github.com/observablehq/inspector for rendering values / components?
+
+    return html`
+      <table>
+        <td>
+          <label>
+            <h3>App source:</h3>
+            <pre>${edit}</pre>
+          </label>
+        </td>
+        <td>
+          <h3>Code:</h3>
+          <pre style="max-height: 10ex; overflow: scroll;">${code}</pre>
+          <${DisplayResult}
+            evalResult=${evalResult}
+            err=${err}
+            key=${code /*force re-render after edit (TODO: reduce excessive remounts?)*/}
+          />
+        </td>
+      </table>`
+  }
+
+  var DisplayResult = ({ evalResult, err }) => {
+    if (err) {
+      return html`<${Error}>${err.stack}<//>`
+    }
+
+    try {
+      evalResult = JSON.stringify(evalResult, null, 2) || evalResult
+    } catch (err) {
+    }
+    try {
+      evalResult = evalResult.toString()
+    } catch (err) {
+    }
+
+    return html`<div>
+      <h3>Eval result:</h3>
+      ${evalResult}
+      <h3>Render App:</h3>
+      <${ErrorBoundary}>
+        <${App}/>
+      <//>
+    </div>`
+  }
+
+  var Error = ({ children }) =>
+    html`<div style=${{ whiteSpace: 'pre-wrap', textAlign: 'left', fontFamily: 'monospace', color: '#a00' }}>
+      ${children}
+    </div>`;
+
+  class ErrorBoundary extends Component {
+    state = {};
+
+    componentDidCatch(error, info) {
+      this.setState({ error: error.toString(), componentStack: info?.componentStack });
+      console.warn(this.state)
+    }
+
+    render() {
+      const { error, componentStack } = this.state;
+      if (error) {
+        return html`<${Error}>
+            ${error}
+            ${componentStack}
+          <//>`;
+      }
+
+      return this.props.children;
+    }
+  }
+
+
+  render(html`<${EditEvalRenderLoop} />`, document.body)
+</script>
