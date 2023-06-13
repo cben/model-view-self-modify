@@ -1,15 +1,50 @@
 <style>
-  textarea.skipSelection::selection {
+  .cm-editor {
+    border: inset grey 1px;
+    height: 85vh;
+  }
+
+  textarea.skipSelection::selection,
+  .skipSelection .cm-selectionBackground {
     text-decoration: line-through;
     background-color: grey;
   }
 </style>
+
+<script type="importmap">
+  {
+    "imports": {
+      "@codemirror/basic-setup": "https://unpkg.com/@codemirror/basic-setup/dist/index.js",
+      "@codemirror/autocomplete": "https://unpkg.com/@codemirror/autocomplete/dist/index.js",
+      "@codemirror/commands": "https://unpkg.com/@codemirror/commands/dist/index.js",
+      "@codemirror/language": "https://unpkg.com/@codemirror/language/dist/index.js",
+      "@codemirror/lang-javascript": "https://unpkg.com/@codemirror/lang-javascript/dist/index.js",
+      "@codemirror/lint": "https://unpkg.com/@codemirror/lint/dist/index.js",
+      "@codemirror/search": "https://unpkg.com/@codemirror/search/dist/index.js",
+      "@codemirror/state": "https://unpkg.com/@codemirror/state/dist/index.js",
+      "@codemirror/view": "https://unpkg.com/@codemirror/view/dist/index.js",
+      "@lezer/common": "https://unpkg.com/@lezer/common/dist/index.js",
+      "@lezer/highlight": "https://unpkg.com/@lezer/highlight/dist/index.js",
+      "@lezer/javascript": "https://unpkg.com/@lezer/javascript/dist/index.es.js",
+      "@lezer/lr": "https://unpkg.com/@lezer/lr/dist/index.js",
+      "style-mod": "https://unpkg.com/style-mod/src/style-mod.js",
+      "w3c-keyname": "https://unpkg.com/w3c-keyname/index.js",
+      "crelt": "https://unpkg.com/crelt/index.js"
+    }
+  }
+</script>
+
 <script type="module">
   // htm gives us JSX-like notation in standard JS tagged template literals.
   import {
     html, // bound to preact's createElement() constructor.
-    render, Component, useState
+    render, Component, useEffect, useState, useRef
   } from 'https://unpkg.com/htm/preact/standalone.module.js'
+
+  import { EditorState, basicSetup } from '@codemirror/basic-setup';
+  import { EditorView, keymap } from '@codemirror/view';
+  import { defaultKeymap, indentWithTab } from '@codemirror/commands';
+  import { javascript } from '@codemirror/lang-javascript';
 
   // -- Imports to be used by user code --
 
@@ -84,18 +119,29 @@
   var demoCode = 'App = (props) => html`<a href="/">Hello!</a>`'
 
   var EditEvalRenderLoop = (props) => {
-    const [skipSelection, setSkipSelection] = useState(false)
+    const [skipSelection, setSkipSelection] = useState(true)
     const [code, setCode] = useState(localStorage.getItem('code') || demoCode)
     const [selection, setSelection] = useState([0, 0])
+    const [codeToRun, setCodeToRun] = useState('')
 
     const saveCode = (code) => {
-      localStorage.setItem('code', event.target.value)
+      console.log('saveCode')
+      localStorage.setItem('code', code)
       setCode(code)
     }
 
-    const codeToRun = skipSelection
-      ? code.slice(0, selection[0]) + code.slice(selection[1])
-      : code
+    useEffect(() => {
+      const slicedCode = skipSelection
+        ? code.slice(0, selection[0]) + code.slice(selection[1])
+        : code
+      if (slicedCode !== codeToRun) {
+        setCodeToRun(slicedCode)
+      }
+    }, [skipSelection, code, selection])
+
+    // TODO: move evaluation into above if (slicedCode !== codeToRun)?
+
+    window.App = () => '`App` not defined.' // TODO: tolerate App being undefined
 
     let err = undefined
     let evalResult = undefined
@@ -108,6 +154,13 @@
 
     // TODO: use https://github.com/observablehq/inspector for rendering values / components?
 
+    // <div>
+    //   <input type="checkbox" name="skipSelection" accessKey="s" 
+    //     onClick=${event => { setSkipSelection(event.target.checked) }}
+    //   />
+    //   <label for="skipSelection">/* <u>s</u>election */</label>
+    // </div>
+
     return html`
       <table>
         <td>
@@ -117,12 +170,6 @@
                 code=${code} setCode=${saveCode} selection=${selection} setSelection=${setSelection} 
                 className=${skipSelection && 'skipSelection '}
               />
-            <div>
-              <input type="checkbox" name="skipSelection" accessKey="s" 
-                onClick=${event => { setSkipSelection(event.target.checked) }}
-              />
-              <label for="skipSelection">/* <u>s</u>election */</label>
-            </div>
           </label>
         </td>
         <td>
@@ -138,28 +185,39 @@
   }
 
   var Editor = ({ code, setCode, selection, setSelection, className }) => {
-    const onChange = (event) => {
-      console.log('onChange')
-      setCode(event.target.value)
-    }
-
-    const onSelect = (event) => {
-      const range = [event.target.selectionStart, event.target.selectionEnd]
-      console.log('onSelect', ...range)
-      if (!_.isEqual(range, selection)) {
-        setSelection(range)
+    const onUpdate = (update) => {
+      if (update.docChanged) {
+        console.log('docChanged', update.state.doc)
+        setCode(update.state.doc.toString())
       }
+      // TODO support multiple ranges
+      const range = [update.state.selection.main.from, update.state.selection.main.to]
+      setSelection(range)
     }
 
-    return html`<textarea
-      rows="35"
-      cols="60"
-      id="source"
-      onInput=${onChange}
-      onSelect=${onSelect}
-      value=${code}
-      className=${className}
-    />`
+    // https://dev.to/adamcollier/adding-codemirror-6-to-a-react-project-36hl
+
+    const editor = useRef()
+
+    useEffect(() => {
+      const startState = EditorState.create({
+        doc: code,
+        extensions: [
+          basicSetup,
+          keymap.of([defaultKeymap, indentWithTab]),
+          javascript(),
+          EditorView.updateListener.of(onUpdate), // TODO callbacks like `setCode` all come from 1st render
+        ],
+      })
+
+      const view = new EditorView({ state: startState, parent: editor.current })
+
+      return () => {
+        view.destroy()
+      };
+    }, [])
+
+    return html`<div className=${className} ref=${editor} />`
   }
 
   var DisplayResult = ({ evalResult, err }) => {
