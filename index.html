@@ -84,35 +84,14 @@
   var demoCode = 'App = (props) => html`<a href="/">Hello!</a>`'
 
   var EditEvalRenderLoop = (props) => {
+    const [skipSelection, setSkipSelection] = useState(false)
     const [code, setCode] = useState(localStorage.getItem('code') || demoCode)
     const [selection, setSelection] = useState([0, 0])
-    const [skipSelection, setSkipSelection] = useState(false)
 
-    const onChange = (event) => {
-      console.log('onChange')
+    const saveCode = (code) => {
       localStorage.setItem('code', event.target.value)
-      setCode(event.target.value)
+      setCode(code)
     }
-
-    const onSelect = (event) => {
-      const range = [event.target.selectionStart, event.target.selectionEnd]
-      console.log('onSelect', ...range)
-      if (!_.isEqual(range, selection)) {
-        setSelection(range)
-      }
-    }
-
-    var edit = html`<textarea
-      rows="40"
-      cols="60"
-      id="source"
-      onInput=${onChange}
-      onSelect=${onSelect}
-      value=${code}
-      className=${skipSelection && 'skipSelection '}
-    />`
-
-    window.App = () => '`App` not defined.' // TODO: tolerate App being undefined
 
     const codeToRun = skipSelection
       ? code.slice(0, selection[0]) + code.slice(selection[1])
@@ -134,7 +113,10 @@
         <td>
           <label>
             <h3>App source:</h3>
-            ${edit}
+              <${Editor} 
+                code=${code} setCode=${saveCode} selection=${selection} setSelection=${setSelection} 
+                className=${skipSelection && 'skipSelection '}
+              />
             <div>
               <input type="checkbox" name="skipSelection" accessKey="s" 
                 onClick=${event => { setSkipSelection(event.target.checked) }}
@@ -153,6 +135,31 @@
           />
         </td>
       </table>`
+  }
+
+  var Editor = ({ code, setCode, selection, setSelection, className }) => {
+    const onChange = (event) => {
+      console.log('onChange')
+      setCode(event.target.value)
+    }
+
+    const onSelect = (event) => {
+      const range = [event.target.selectionStart, event.target.selectionEnd]
+      console.log('onSelect', ...range)
+      if (!_.isEqual(range, selection)) {
+        setSelection(range)
+      }
+    }
+
+    return html`<textarea
+      rows="35"
+      cols="60"
+      id="source"
+      onInput=${onChange}
+      onSelect=${onSelect}
+      value=${code}
+      className=${className}
+    />`
   }
 
   var DisplayResult = ({ evalResult, err }) => {
