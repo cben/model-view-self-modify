@@ -212,6 +212,16 @@
 
       const view = new EditorView({ state: startState, parent: editor.current })
 
+      // TODO SCOPING KLUDGE TODO
+      window.WRITE = (text) => {
+        console.log('WRITE', text)
+        if (text) {
+          view.dispatch({
+            changes: { from: view.state.selection.main.from, insert: text.toString() }
+          })
+        }
+      }
+
       return () => {
         view.destroy()
       };
