@@ -3,12 +3,6 @@
     border: inset grey 1px;
     height: 85vh;
   }
-
-  textarea.skipSelection::selection,
-  .skipSelection .cm-selectionBackground {
-    text-decoration: line-through;
-    background-color: grey;
-  }
 </style>
 
 <script type="importmap">
@@ -119,10 +113,7 @@
   var demoCode = 'App = (props) => html`<a href="/">Hello!</a>`'
 
   var EditEvalRenderLoop = (props) => {
-    const [skipSelection, setSkipSelection] = useState(true)
     const [code, setCode] = useState(localStorage.getItem('code') || demoCode)
-    const [selection, setSelection] = useState([0, 0])
-    const [codeToRun, setCodeToRun] = useState('')
 
     const saveCode = (code) => {
       console.log('saveCode')
@@ -130,36 +121,18 @@
       setCode(code)
     }
 
-    useEffect(() => {
-      const slicedCode = skipSelection
-        ? code.slice(0, selection[0]) + code.slice(selection[1])
-        : code
-      if (slicedCode !== codeToRun) {
-        setCodeToRun(slicedCode)
-      }
-    }, [skipSelection, code, selection])
-
-    // TODO: move evaluation into above if (slicedCode !== codeToRun)?
-
     window.App = () => '`App` not defined.' // TODO: tolerate App being undefined
 
     let err = undefined
     let evalResult = undefined
     try {
       console.log('Evaluating...')
-      evalResult = betterEvalFunction(codeToRun)
+      evalResult = betterEvalFunction(code)
     } catch (err2) {
       err = err2
     }
 
     // TODO: use https://github.com/observablehq/inspector for rendering values / components?
-
-    // <div>
-    //   <input type="checkbox" name="skipSelection" accessKey="s" 
-    //     onClick=${event => { setSkipSelection(event.target.checked) }}
-    //   />
-    //   <label for="skipSelection">/* <u>s</u>election */</label>
-    // </div>
 
     return html`
       <table>
@@ -167,32 +140,26 @@
           <label>
             <h3>App source:</h3>
               <${Editor} 
-                code=${code} setCode=${saveCode} selection=${selection} setSelection=${setSelection} 
-                className=${skipSelection && 'skipSelection '}
+                code=${code} setCode=${saveCode}
               />
           </label>
         </td>
         <td>
-          <h3>Evaluated code:</h3>
-          <pre style="max-height: 10ex; overflow: scroll;">${codeToRun}</pre>
           <${DisplayResult}
             evalResult=${evalResult}
             err=${err}
-            key=${codeToRun /*force ErrorBoundary reset after edit (TODO: reduce excessive remounts?)*/}
+            key=${code /*force ErrorBoundary reset after edit (TODO: reduce excessive remounts?)*/}
           />
         </td>
       </table>`
   }
 
-  var Editor = ({ code, setCode, selection, setSelection, className }) => {
+  var Editor = ({ code, setCode, className }) => {
     const onUpdate = (update) => {
       if (update.docChanged) {
         console.log('docChanged', update.state.doc)
         setCode(update.state.doc.toString())
       }
-      // TODO support multiple ranges
-      const range = [update.state.selection.main.from, update.state.selection.main.to]
-      setSelection(range)
     }
 
     // https://dev.to/adamcollier/adding-codemirror-6-to-a-react-project-36hl
