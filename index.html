@@ -53,11 +53,11 @@
 
   // Firefox reports 1-based `lineNumber`, but also inserts `function anonymous(arg1, arg2` as line 1,
   // and `) {` as line 2 (see .toString() on successfully parsed functions). Measure instead of guessing!
-  let functionSyntaxErrorLineOffset = 0
+  let functionLineOffset = 0
   try {
     Function('!@#$')
   } catch (err) {
-    functionSyntaxErrorLineOffset = err.lineNumber
+    functionLineOffset = err.lineNumber
   }
 
   // Uses `Function` constructor rules: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/Function
@@ -66,7 +66,8 @@
   var betterEvalFunction = code => {
     let parsedFunc
     try {
-      parsedFunc = new Function(code)
+      // sourceURL pragma makes stack traces more readable.
+      parsedFunc = new Function(code + '\n//# sourceURL=evaluated-code')
     } catch (err) {
       if (err instanceof SyntaxError) {
         // Goal: find & show responsible line directly in the message
@@ -75,7 +76,7 @@
 
         // Firefox, non-standard
         if (lineNumber !== undefined) {
-          const line = lineNumber - functionSyntaxErrorLineOffset
+          const line = lineNumber - functionLineOffset
           throw SyntaxError(
             `${message} (at ${line + 1}:${columnNumber}):\n` +
             `${lines[line] || ''}\n` +
@@ -199,7 +200,29 @@
 
   var DisplayResult = ({ evalResult, err }) => {
     if (err) {
-      return html`<${Error}>${err.stack}<//>`
+      let text
+      if (err.stack.includes(err.name)) {
+        // Some browsers include `name` & `message` in `stack`
+        text = err.stack
+      } else {
+        text = `${err.name}: ${err.message}\n\n${err.stack}`
+      }
+
+      // TODO: line numbers in the stack are all by `functionLineOffset` :-(
+
+      // Omit betterEvalFunction() and its callers from stack.
+      // (This also handles SyntaxError not having any useful stack.)
+      // Avoid cutting user's frames, even if user code happens to contain same name.
+      const cutPos = text.lastIndexOf('betterEvalFunction')
+      const userPosToProtect = text.lastIndexOf('evaluated-code')
+      if (cutPos >= 0 && cutPos > userPosToProtect) {
+        // text = text.slice(0, cutPos)
+      }
+
+      return html`<div>
+        <h3>Exception:</h3>
+        <${Error}>${text}<//>
+      </div>`
     }
 
     try {
