@@ -184,8 +184,10 @@
       window.WRITE = (text) => {
         console.log('WRITE', text)
         if (text) {
+          const pos = view.state.selection.main.from
           view.dispatch({
-            changes: { from: view.state.selection.main.from, insert: text.toString() }
+            changes: { from: pos, insert: text.toString() },
+            selection: { anchor: pos + text.toString().length },
           })
         }
       }
@@ -216,7 +218,7 @@
       const cutPos = text.lastIndexOf('betterEvalFunction')
       const userPosToProtect = text.lastIndexOf('evaluated-code')
       if (cutPos >= 0 && cutPos > userPosToProtect) {
-        // text = text.slice(0, cutPos)
+        text = text.slice(0, cutPos)
       }
 
       return html`<div>
