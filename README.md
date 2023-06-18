@@ -1,5 +1,3 @@
-
-
 # Things I learned in 1st week of prototyping
 
 * localStorage is awesome for edit/reload development!
@@ -48,3 +46,9 @@ but more important:
 
 * don't reinvent the env — build on observablehq or similar. (https://github.com/asg017/dataflow ?)
   - Observable notebook already parses separate JS cells, computes data dependencies and manages re-computation...
+
+* is React conceptual overkill here?  
+  For the most part, instead of ``html`<${View} ...${model}/>` `` it's simpler to write `View(model)`.  
+  The deep benefit of React.createElement is separation from "mount component now" vs. "render it later",
+  and supporting a stateful lifecycle...  
+  But if we [pretend to] re-evaluate everything all the time, we can just call functions (like in Elm!)

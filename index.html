@@ -1,7 +1,13 @@
 <style>
   .cm-editor {
-    border: inset grey 1px;
+    border: inset 1px;
     height: 85vh;
+    max-width: 50vw;
+  }
+
+  kbd {
+    outline: outset 1px;
+    border-radius: 3px;
   }
 </style>
 
@@ -43,6 +49,7 @@
   // -- Imports to be used by user code --
 
   window.html = html
+  window.Component = Component
   // TODO: https://stackoverflow.com/questions/47978809/how-to-dynamically-execute-eval-javascript-code-that-contains-an-es6-module-re
   import _ from 'https://unpkg.com/lodash-es'
   window._ = _
@@ -111,7 +118,7 @@
 
   // ---
 
-  var demoCode = 'App = (props) => html`<a href="/">Hello!</a>`'
+  var demoCode = 'return (props) => html`<a href="/">Hello!</a>`'
 
   var EditEvalRenderLoop = (props) => {
     const [code, setCode] = useState(localStorage.getItem('code') || demoCode)
@@ -121,8 +128,6 @@
       localStorage.setItem('code', code)
       setCode(code)
     }
-
-    window.App = () => '`App` not defined.' // TODO: tolerate App being undefined
 
     let err = undefined
     let evalResult = undefined
@@ -139,10 +144,12 @@
       <table>
         <td>
           <label>
-            <h3>App source:</h3>
+            <h3>Source code:</h3>
               <${Editor} 
                 code=${code} setCode=${saveCode}
               />
+              <p>Use <code>return ...</code> statement somewhere.
+                 To move focus outside editor, press <kbd>Esc</kbd> then <kbd>Tab</kbd>.</p>
           </label>
         </td>
         <td>
@@ -158,7 +165,7 @@
   var Editor = ({ code, setCode, className }) => {
     const onUpdate = (update) => {
       if (update.docChanged) {
-        console.log('docChanged', update.state.doc)
+        // console.log('docChanged', update.state.doc)
         setCode(update.state.doc.toString())
       }
     }
@@ -201,6 +208,10 @@
   }
 
   var DisplayResult = ({ evalResult, err }) => {
+    // help debugging this display in browser console
+    window.evalResult = evalResult
+    window.err = err
+
     if (err) {
       let text
       if (err.stack.includes(err.name)) {
@@ -227,22 +238,33 @@
       </div>`
     }
 
+    let resultAsText = evalResult
     try {
-      evalResult = JSON.stringify(evalResult, null, 2) || evalResult
+      // Better support Set
+      const replacer = (_key, value) =>
+        value instanceof Set ? `Set([${[...value]}])` : value
+      resultAsText = JSON.stringify(evalResult, replacer, 2) || evalResult
     } catch (err) {
     }
     try {
-      evalResult = evalResult.toString()
+      resultAsText = resultAsText.toString()
     } catch (err) {
     }
 
+    // React cares about functional vs. class component https://overreacted.io/how-does-react-tell-a-class-from-a-function/
+    // but we don't, and as it happens in JS a class is just a 'function' with .prototype.
+    const mayBeComponent = typeof evalResult === 'function'
+
     return html`<div>
-      <h3>Eval result:</h3>
+      ${mayBeComponent && html`
+        <h3>As a React component:</h3>
+        <${ErrorBoundary}>
+          <${evalResult} />
+        <//>`}
+      <h3>As a node:</h3>
       ${evalResult}
-      <h3>Render App:</h3>
-      <${ErrorBoundary}>
-        <${App}/>
-      <//>
+      <h3>As text:</h3>
+      <pre>${resultAsText}</pre>
     </div>`
   }
 
