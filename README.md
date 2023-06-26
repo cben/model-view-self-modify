@@ -23,7 +23,7 @@ on essential complexity and walls between language/env authors | developer | end
 
 - To make it friendlier, classical UI explicitly reads events, translates them to state changes —
   i.e. treats user input as _external DSL_.  Don't do that!  
-  _Instead, translate user actions to changes in the source editor — which trigger re-computation.
+  _Instead, translate user actions to changes in the source editor_ — which trigger re-computation.
 
 - Traditional developer (especially one attempting event sourcing / time travel / record-replay live coding)
   needs two concepts of stateful change: changing state inside the app, but also changing the app source.
