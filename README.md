@@ -38,8 +38,8 @@ on essential complexity and walls between language/env authors | developer | end
 
 # HOW TO TRY
 
-1. Open `index.html` (or serve it by e.g. `python3 -m http.server`).  
-2. Paste the content of `tetris.js` into the editor.
+1. https://model-view-self-modify.netlify.app/ (or open `index.html` locally, or serve it by e.g. `python3 -m http.server`).  
+2. Paste the content of [tetris.js](tetris.js) into the editor.
 3. Start moving "TIME TRAVEL" line up.
 4. Put editor cursor before it and start clicking [left] [right] [down] buttons to play from that moment.
 5. Put cursor inside `RCSet([...])` in `newGame.board`.  Start clicking board cells to mark them occupied.
