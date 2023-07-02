@@ -1,5 +1,5 @@
-var w = 8
-var h = 10
+var H = 10
+var W = 8
 
 // Sets of coordinates are a fun representation, but JS Set doesn't support tuple keys :-(
 var formatRC = JSON.stringify
@@ -7,6 +7,8 @@ var parseRC = JSON.parse
 
 var RCSet = pairs => new Set(pairs.map(formatRC))
 var mapRC = (rcset, f) => RCSet([...rcset].map(parseRC).map(f))
+var unionRC = (a, b) => new Set(_.union([...a], [...b]))
+var intersectionRC = (a, b) => new Set(_.intersection([...a], [...b]))
 
 var Cell = ({ rc, color }) =>
   html`<td 
@@ -16,17 +18,20 @@ var Cell = ({ rc, color }) =>
     ${rc}
   </td>`
 
-var Board = ({ rcToColorFunc }) => 
+var Board = ({ rcToColorFunc, h = H, w = W }) => 
   html`<table>
     ${_.range(0, h).map(r =>
       html`<tr>
         ${_.range(0, w).map(c => {
           const rc = formatRC([r, c])
-          return html`<${Cell} rc=${rc} color=${rcToColorFunc(rc)}/>`
+          return html`<${Cell} key=${rc} rc=${rc} color=${rcToColorFunc(rc)}/>`
         })}
       </tr>`
     )}
   </table>`
+
+var fullBoard = RCSet(_.range(0, H).flatMap(r => _.range(0, W).map(c => [r, c])))
+var floor = RCSet(_.range(0, W).map(c => [H, c]))
 
 var L = RCSet([
   [0,4],
@@ -36,33 +41,57 @@ var L = RCSet([
 
 var newGame = { 
   shape: L, 
-  board: RCSet([[8,3], [8,4], [8,5], [9,4], ]), // TEMP, to test shape/board collisions
+  board: RCSet([[8,3], [8,4], [9,4], ]), // TEMP, to test shape/board collisions
   score: 0,
 }
-
-var move = (deltaRow, deltaCol) => (model) => {
-  return {
-    ...model, 
-    shape: mapRC(model.shape, ([r, c]) => [r + deltaRow, c + deltaCol]),
-  }
-  // TODO: collision / settling onto board
-}
-
-var down = move(1, 0)
-var left = move(0, -1)
-var right = move(0, +1)
 
 var View = ({ shape, board, score }) => 
   html`<div>
     <div>Score: ${score}</div>
-    <${Board} rcToColorFunc=${rc =>
-            shape.has(rc) ? (board.has(rc) ? 'red' : 'blue')
-                          : (board.has(rc) ? 'green' : 'white')
+    <${Board} h=${H+1} rcToColorFunc=${rc =>
+            shape.has(rc) ? (board.has(rc) ? 'red' : 'blue') :
+            board.has(rc) ? 'green' : 
+            floor.has(rc) ? 'grey' :
+            'white'
       }/>
     <button onClick=${() => WRITE('\nmodel = left(model)')}>left</button>
     <button onClick=${() => WRITE('\nmodel = right(model)')}>right</button>
     <button onClick=${() => WRITE('\nmodel = down(model)')}>down</button>
   </div>`
+// return View(newGame)
+
+
+var lockInPlace = (model) => {
+  const { shape, board, score } = model
+  return {
+    score: score + 1,
+    board: (unionRC(shape, board)),
+    shape: L,
+  }
+}
+
+var invalidMove = model => model
+
+var move = (deltaRow, deltaCol, onCollision) => (model) => {
+  const { shape, board, score } = model
+  const newPos = mapRC(shape, ([r, c]) => [r + deltaRow, c + deltaCol])
+  
+  if (intersectionRC(newPos, board).size > 0 ||
+      intersectionRC(newPos, floor).size > 0) {
+    return onCollision(model)
+  }
+  if (intersectionRC(newPos, fullBoard).size < newPos.size) {
+    return invalidMove(model)
+  }
+  return {
+    ...model,
+    shape: newPos,
+  }
+}
+
+var left = move(0, -1, invalidMove)
+var right = move(0, +1, invalidMove)
+var down = move(+1, 0, lockInPlace)
 
 // GAME HISTORY
 
@@ -71,13 +100,44 @@ model = down(model)
 model = down(model)
 model = left(model)
 model = left(model)
+model = left(model)
+model = down(model)
+model = down(model)
+model = down(model)
 model = down(model)
 model = down(model)
 model = left(model)
 model = down(model)
 model = down(model)
 model = down(model)
+model = down(model)
+model = down(model)
 model = right(model)
+model = right(model)
+model = left(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = right(model)
+model = right(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = left(model)
+model = left(model)
+model = left(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
 /* -- TIME TRAVEL: use Alt+Up / Alt+Down to move this line ---
 */
 
