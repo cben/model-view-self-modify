@@ -1,5 +1,5 @@
 > By admitting input, a program acquires a control language by which a user can guide the program
-> through a maze of possibilities. — http://forth.org/POL.pdf
+> through a maze of possibilities. — [Chuck Moore](http://forth.org/POL.pdf)
 
 # what: Model |> View |> Self-modify architecture
 
@@ -105,9 +105,14 @@ on essential complexity and walls between language/env authors | developer | end
 # Future
 
 * finish the Tetris
-* look for max opportunities to use WRITE() during coding
+
+* look for max opportunities to use WRITE() during coding - "moldable development"
   - "level editor" kind of stuff
   - color picker
+
+* It's fragile to place editor cursor correctly before interaction.  Add a way to target a fixed place in code.
+  - MVP: `BEFORE_COMMENT('FOO').WRITE(...)` targetting `//FOO` or `/*FOO*/`?  
+    (It's important to avoid target the code itself that mentions the target name :-)
 
 * go meta: Shift parts of the live env e.g. <DisplayResult> into the env itself so they can be edited?
   - serialize CodeMirror edit actions to a text stream, allow time travel there too?!
@@ -119,6 +124,6 @@ but more important:
   - mobx?
 
 * don't reinvent the env — build on observablehq or similar. (https://github.com/asg017/dataflow ?)
-  - Observable notebook already parses separate JS cells, computes data dependencies and manages re-computation...
+  - Observable notebook already parses separate JS cells, [computes data dependencies and manages re-computation](https://observablehq.com/@observablehq/how-observable-runs)...
 
 * Try React "fast refresh" API to replace re-defined components in-place?
