@@ -60,14 +60,37 @@ var View = ({ shape, board, score }) =>
   </div>`
 // return View(newGame)
 
+var completeLines = (model) => {
+  let { shape, board, score } = model
+  var newRows = []
+  // scan bottom-up
+  _.rangeRight(0, H).forEach(r => {
+    const colSet = _.range(0, W).filter(c => board.has(formatRC([r, c])))
+    if (colSet.length == W) {
+      score += 10
+      // omit the completed line
+    } else {
+      // include it
+      newRows.push(colSet)
+    }
+  })
+  return {
+    board: RCSet(_.rangeRight(0, H).flatMap((row, i) => 
+      (newRows[i] ?? []).map(col => [row, col])
+    )),
+    shape,
+    score,
+  }
+}
+
 
 var lockInPlace = (model) => {
   const { shape, board, score } = model
-  return {
+  return completeLines({
     score: score + 1,
     board: (unionRC(shape, board)),
     shape: L,
-  }
+  })
 }
 
 var invalidMove = model => model
@@ -136,9 +159,9 @@ model = down(model)
 model = down(model)
 model = down(model)
 model = down(model)
-model = down(model)
-model = down(model)
 /* -- TIME TRAVEL: use Alt+Up / Alt+Down to move this line ---
+model = down(model)
+model = down(model)
 */
 
 // Any of these forms should render:
