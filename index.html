@@ -1,8 +1,25 @@
 <style>
   .cm-editor {
     border: inset 1px;
-    height: 85vh;
+    height: 80vh;
     max-width: 50vw;
+  }
+
+  *:focus, .cm-editor.cm-focused {
+    outline: 2px dashed purple;
+  }
+
+  .results {
+    height: 100vh;
+    overflow: scroll;
+  }
+
+  .result th {
+    text-align: start;
+  }
+  .result-presentation {
+    max-height: 70vh;
+    overflow: scroll;
   }
 
   kbd {
@@ -41,10 +58,10 @@
     render, Component, useEffect, useState, useRef
   } from 'https://unpkg.com/htm/preact/standalone.module.js'
 
-  import { EditorState, basicSetup } from '@codemirror/basic-setup';
-  import { EditorView, keymap } from '@codemirror/view';
-  import { defaultKeymap, indentWithTab } from '@codemirror/commands';
-  import { javascript } from '@codemirror/lang-javascript';
+  import { EditorState, basicSetup } from '@codemirror/basic-setup'
+  import { EditorView, keymap } from '@codemirror/view'
+  import { defaultKeymap, indentWithTab } from '@codemirror/commands'
+  import { javascript } from '@codemirror/lang-javascript'
 
   // -- Imports to be used by user code --
 
@@ -67,14 +84,19 @@
     functionLineOffset = err.lineNumber
   }
 
-  // Uses `Function` constructor rules: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/Function
-  //  - `code` should contain a `return` statement if you want a result.
+  // AFAICT GeneratorFunction syntax is strict superset of Function — can still use regular `return`.
+  // - `code` should contain `yield` and/or `return` statements if you want a result.
+  // - Caller has to repeatedly call `.next()` to collect them.
+  //
+  // Uses essentially same scoping rules as `Function` constructor:
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/Function
   //  - assignments without `var`/`let`/`const` do write to global namespace.
   var betterEvalFunction = code => {
+    const GeneratorFunction = function* () {}.constructor;
     let parsedFunc
     try {
       // sourceURL pragma makes stack traces more readable.
-      parsedFunc = new Function(code + '\n//# sourceURL=evaluated-code')
+      parsedFunc = new GeneratorFunction(code + '\n//# sourceURL=evaluated-code')
     } catch (err) {
       if (err instanceof SyntaxError) {
         // Goal: find & show responsible line directly in the message
@@ -129,35 +151,47 @@
       setCode(code)
     }
 
-    let err = undefined
-    let evalResult = undefined
+    // If code uses `yield` to return multiple UIs, it's possible for some to succeed but one raise exception.
+    var evalResults = [] // each item is either { result } or { err }
     try {
       console.log('Evaluating...')
-      evalResult = betterEvalFunction(code)
+      const iterator = betterEvalFunction(code)
+      // for..of would not collect a final `return`, so call `.next()` ourselves.
+      while(true) {
+        const item = iterator.next()
+        evalResults.push({ result: item.value })
+        // Treating final `return` same as last `yield`.  TODO: trailing `undefined` if no return.
+        if (item.done)
+          break
+      }
     } catch (err2) {
-      err = err2
+      evalResults.push({ err: err2 })
     }
+    // help debugging this display in browser console
+    window.evalResults = evalResults
 
     // TODO: use https://github.com/observablehq/inspector for rendering values / components?
 
     return html`
       <table>
         <td>
-          <label>
-            <h3>Source code:</h3>
-              <${Editor} 
-                code=${code} setCode=${saveCode}
-              />
-              <p>Use <code>return ...</code> statement somewhere.
-                 To move focus outside editor, press <kbd>Esc</kbd> then <kbd>Tab</kbd>.</p>
-          </label>
+          <h3>Source code:</h3>
+          <${Editor}
+            code=${code} setCode=${saveCode}
+          />
+          <p>Use <code>yield ...</code> and/or <code>return ...</code> statements.
+             To move focus outside editor, press <kbd>Esc</kbd> then <kbd>Tab</kbd>.</p>
         </td>
         <td>
-          <${DisplayResult}
-            evalResult=${evalResult}
-            err=${err}
-            key=${code /*force ErrorBoundary reset after edit (TODO: reduce excessive remounts?)*/}
-          />
+          <div class="results">
+            ${evalResults.map(({ result, err }) =>
+              html`<${DisplayResult}
+                evalResult=${result}
+                err=${err}
+                key=${code /*force ErrorBoundary reset after edit (TODO: reduce excessive remounts?)*/}
+              /> <hr/>`
+            )}
+          </div>
         </td>
       </table>`
   }
@@ -173,6 +207,7 @@
     // https://dev.to/adamcollier/adding-codemirror-6-to-a-react-project-36hl
 
     const editor = useRef()
+    window.cmEditor = editor
 
     useEffect(() => {
       const startState = EditorState.create({
@@ -186,6 +221,7 @@
       })
 
       const view = new EditorView({ state: startState, parent: editor.current })
+      window.cmView = view
 
       // TODO SCOPING KLUDGE TODO
       window.WRITE = (text) => {
@@ -208,10 +244,6 @@
   }
 
   var DisplayResult = ({ evalResult, err }) => {
-    // help debugging this display in browser console
-    window.evalResult = evalResult
-    window.err = err
-
     if (err) {
       let text
       if (err.stack.includes(err.name)) {
@@ -255,16 +287,34 @@
     // but we don't, and as it happens in JS a class is just a 'function' with .prototype.
     const mayBeComponent = typeof evalResult === 'function'
 
-    return html`<div>
-      ${mayBeComponent && html`
-        <h3>As a React component:</h3>
-        <${ErrorBoundary}>
-          <${evalResult} />
-        <//>`}
-      <h3>As a node:</h3>
-      ${evalResult}
-      <h3>As text:</h3>
-      <pre>${resultAsText}</pre>
+    return html`<div class="result">
+      <table>
+        <tr>
+          ${mayBeComponent && html`
+            <th>As a React component:</th>
+          `}
+          <th>As a node:</th>
+          <th>As text:</th>
+        </tr>
+        <tr>
+          ${mayBeComponent && html`
+            <td><div class="result-presentation">
+              <${ErrorBoundary}>
+                <${evalResult} />
+              <//>
+              </div>
+            </td>
+          `}
+          <td><div class="result-presentation">
+            ${evalResult}
+            </div>
+          </td>
+          <td><div class="result-presentation">
+            <pre>${resultAsText}</pre>
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>`
   }
 

@@ -38,7 +38,7 @@ var L = RCSet([
   [1,4],
   [2,4], [2,5],
 ])
-// return Board({ rcToStyleFunc: rc => L.has(rc) ? 'background-color: blue' : ''})
+yield Board({ h: 4, rcToStyleFunc: rc => L.has(rc) ? 'background-color: blue' : ''})
 
 // === MODEL ===
 
