@@ -125,5 +125,6 @@ but more important:
 
 * don't reinvent the env — build on observablehq or similar. (https://github.com/asg017/dataflow ?)
   - Observable notebook already parses separate JS cells, [computes data dependencies and manages re-computation](https://observablehq.com/@observablehq/how-observable-runs)...
+  - See https://maxbo.me/a-html-file-is-all-you-need.html for how to use Observable Runtime library, but also other cool tricks 🤯
 
 * Try React "fast refresh" API to replace re-defined components in-place?
