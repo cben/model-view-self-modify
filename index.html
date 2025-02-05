@@ -45,6 +45,9 @@
       "@lezer/javascript": "https://unpkg.com/@lezer/javascript/dist/index.js",
       "@lezer/lr": "https://unpkg.com/@lezer/lr/dist/index.js",
       "@marijn/find-cluster-break": "https://unpkg.com/@marijn/find-cluster-break/src/index.js",
+      "htm": "https://unpkg.com/htm/dist/htm.mjs",
+      "preact": "https://unpkg.com/preact/dist/preact.mjs",
+      "preact/hooks": "https://unpkg.com/preact/hooks/dist/hooks.mjs",
       "style-mod": "https://unpkg.com/style-mod/src/style-mod.js",
       "w3c-keyname": "https://unpkg.com/w3c-keyname/index.js",
       "crelt": "https://unpkg.com/crelt/index.js"
@@ -54,10 +57,10 @@
 
 <script type="module">
   // htm gives us JSX-like notation in standard JS tagged template literals.
-  import {
-    html, // bound to preact's createElement() constructor.
-    render, Component, useEffect, useState, useRef
-  } from 'https://unpkg.com/htm/preact/standalone.module.js'
+  import htm from 'htm'
+  import { h, render, Component, isValidElement } from 'preact'
+  import { useEffect, useState, useRef } from 'preact/hooks'
+  var html = htm.bind(h)
 
   import { EditorState, basicSetup } from '@codemirror/basic-setup'
   import { EditorView, keymap } from '@codemirror/view'
