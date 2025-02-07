@@ -190,11 +190,15 @@
         <td>
           <div class="results">
             ${evalResults.map(({ result, err }) =>
-              html`<${DisplayResult}
-                evalResult=${result}
-                err=${err}
+              html`<${ErrorBoundary}
                 key=${code /*force ErrorBoundary reset after edit (TODO: reduce excessive remounts?)*/}
-              /> <hr/>`
+              >
+                <${DisplayResult}
+                  evalResult=${result}
+                  err=${err}
+                />
+              <//>
+              <hr/>`
             )}
           </div>
         </td>
