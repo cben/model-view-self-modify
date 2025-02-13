@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <meta charset="utf-8" />
 <style>
   .cm-editor {
@@ -6,21 +7,36 @@
     max-width: 50vw;
   }
 
-  *:focus, .cm-editor.cm-focused {
+  *:focus,
+  .cm-editor.cm-focused {
     outline: 2px dashed purple;
   }
 
   .results {
     height: 100vh;
+    width: 100%;
     overflow: scroll;
   }
 
   .result th {
     text-align: start;
   }
-  .result-presentation {
+
+  .result-presentation div {
+    width: max-content;
     max-height: 70vh;
     overflow: auto;
+  }
+
+  .result-presentation.scroll div {
+    /* width: 100%; */
+    height: 8ex;
+    transition: all 0.2s;
+    interpolate-size: allow-keywords;
+  }
+
+  .result-presentation.scroll div:hover {
+    height: auto;
   }
 
   kbd {
@@ -297,6 +313,19 @@
     // but we don't, and as it happens in JS a class is just a 'function' with .prototype.
     const mayBeComponent = typeof evalResult === 'function'
 
+    const mayBeNode = (x) => {
+      if (x instanceof Array) {
+        return x.some(mayBeNode)
+      }
+      // htm doesn't care how VDOM elements are represented; it's up to preact:
+      // https://preactjs.com/guide/v10/api-reference/#h--createelement
+      return (
+        typeof x === 'object' &&
+        typeof x['type'] === 'string' &&
+        typeof x['props'] === 'object'
+      )
+    }
+
     return html`<div class="result">
       <table>
         <tr>
@@ -308,19 +337,24 @@
         </tr>
         <tr>
           ${mayBeComponent && html`
-            <td><div class="result-presentation">
-              <${ErrorBoundary}>
-                <${evalResult} />
-              <//>
+            <td class="result-presentation component">
+              <div>
+                <${ErrorBoundary}>
+                  <${evalResult} />
+                <//>
               </div>
             </td>
           `}
-          <td><div class="result-presentation">
-            ${evalResult}
+          <td class="result-presentation node">
+            <div>
+              <${ErrorBoundary}>
+                ${evalResult}
+              <//>
             </div>
           </td>
-          <td><div class="result-presentation">
-            <pre>${resultAsText}</pre>
+          <td class="result-presentation text ${mayBeNode(evalResult) && 'scroll'}">
+            <div>
+              <pre>${resultAsText}</pre>
             </div>
           </td>
         </tr>
