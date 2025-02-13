@@ -275,7 +275,7 @@
 
       return html`<div>
         <h3>Exception:</h3>
-        <${Error}>${text}<//>
+        <${ShowError}>${text}<//>
       </div>`
     }
 
@@ -328,7 +328,7 @@
     </div>`
   }
 
-  var Error = ({ children }) =>
+  var ShowError = ({ children }) =>
     html`<div style=${{ whiteSpace: 'pre-wrap', textAlign: 'left', fontFamily: 'monospace', color: '#a00' }}>
       ${children}
     </div>`;
@@ -344,7 +344,7 @@
     render() {
       const { error, componentStack } = this.state;
       if (error) {
-        return html`<${Error}>
+        return html`<${ShowError}>
             ${error}
             ${componentStack}
           <//>`;
