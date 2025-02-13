@@ -284,8 +284,9 @@
       // Better support Set
       const replacer = (_key, value) =>
         value instanceof Set ? `Set([${[...value]}])` : value
-      resultAsText = JSON.stringify(evalResult, replacer, 2) || evalResult
+      resultAsText = typeof resultAsText + JSON.stringify(evalResult, replacer, 2)
     } catch (err) {
+      resultAsText = `${resultAsText} // ${err}`
     }
     try {
       resultAsText = resultAsText.toString()
