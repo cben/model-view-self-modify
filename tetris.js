@@ -10,6 +10,48 @@ var mapRC = (rcset, f) => RCSet([...rcset].map(parseRC).map(f))
 var unionRC = (a, b) => new Set(_.union([...a], [...b]))
 var intersectionRC = (a, b) => new Set(_.intersection([...a], [...b]))
 
+// UI that links to source
+// [subtle scoping: `CALLER().JUMP` is evaluated before building the html]
+var H1 = (text) => html`<h1 onclick=${CALLER().JUMP} style="text-decoration: underline; color: blue"># ${text}</h1>`
+var H2 = (text) => html`<h2 onclick=${CALLER().JUMP} style="text-decoration: underline; color: blue">## ${text}</h1>`
+
+yield H2("Unit test helpers") ///////////////////////////
+
+var testFailures = []
+var assertEqual = (actual, expected) => {
+  // FLAWED quick-and-dirty equality.
+  // TODO: import expect from 'https://unpkg.com/expect/build/index.js'
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    testFailures.push(html`<li style=${'list-style-type: "≠"'}>
+      Actual: <code>${JSON.stringify(actual, null, 2)}</code><br/>
+      Expected: <code>${JSON.stringify(expected, null, 2)}</code>
+    </li>`)
+  }
+}
+var Test = (name, func) => {
+  testFailures = []
+  // TODO: can I use implementation's betterEvalFunction() or is it cheating?
+  const pos = CALLER()
+  const jump = html`<button onclick=${() => pos.JUMP()}>${name}</button>`
+  try {
+    func()
+  } catch (e) {
+    return html`${jump} 💥 ${e.name}: ${e.message}<br/>
+    // TODO: .stack line numbers don't match editor numbering by functionLineOffset
+    ${e.stack.split('\n')[0]}`
+  }
+  if (testFailures.length > 0) {
+    return html`${jump} ❌ <ul>${testFailures}</ul>`
+    // TODO link to source location
+  }
+  return html`${jump} ✅`
+}
+// yield Test('exception', () => { foo.bar })
+// yield Test('addition', () => { assertEqual(2+2, 5); assertEqual(2+2, 4); assertEqual(2+2, [6]) })
+yield Test('good', () => { assertEqual(2+2, 4) })
+
+yield H2("Shapes on a board") ///////////////////////////
+
 var Cell = ({ rc, style }) =>
   html`<td
     style="border: grey solid 1px; color: grey; ${style}"
@@ -29,6 +71,8 @@ var Board = ({ rcToStyleFunc, h = H, w = W }) =>
       </tr>`
     )}
   </table>`
+
+yield H1('Game model') ///////////////////////////
 
 var fullBoard = RCSet(_.range(0, H).flatMap(r => _.range(0, W).map(c => [r, c])))
 var floor = RCSet(_.range(0, W).map(c => [H, c]))

@@ -240,7 +240,73 @@
       </table>`
   }
 
+  // TODO SCOPING KLUDGE: these rely on global `cmView` set inside `Editor`
+
+  // convention: self-modify helpers are UPPERCASE.
+  // function rather than `class` to avoid need for `new`.
+  function POSITION(pos) {
+    if (!(this instanceof POSITION)) {
+      return new POSITION(pos)
+    }
+    this.cmView = window.cmView
+    this.pos = pos
+
+    // bind methods so e.g. CURSOR().WRITE can be passed around...
+    this.WRITE = ((text) => {
+      console.log(this.pos, 'WRITE', text)
+      if (text) {
+        this.cmView.dispatch({
+          changes: { from: this.pos, insert: text.toString() },
+          // move cursor after inserted text.
+          selection: { anchor: this.pos + text.toString().length },
+        })
+      }
+    }).bind(this)
+
+    this.JUMP = () => {
+      console.log(this.pos, 'JUMP')
+      this.cmView.dispatch({
+        selection: { head: this.pos, anchor: this.pos },
+        scrollIntoView: true,
+      })
+      this.cmView.focus()
+    }
+  }
+
+  function LINE_COLUMN(line, column) {
+    if (!(this instanceof LINE_COLUMN)) {
+      return new LINE_COLUMN(line, column)
+    }
+    // console.log('LC', line, column)
+    const { from, text } = cmView.state.doc.line(line)
+    // CodeMirror in counts lines from 1 but columns from 0.
+    POSITION.call(this, from + findColumn(text, column - 1))
+    // for debugging
+    this.line = line
+    this.column = column
+  }
+  LINE_COLUMN.prototype.__proto__ = POSITION.prototype
+  LINE_COLUMN.__proto__ = POSITION
+
+  var CALLER = (level=1) => {
+    try { throw Error() }
+    catch (e) {
       const [line, column] = lineColumnFromStack(e.stack, level)
+      return LINE_COLUMN(line, column)
+    }
+  }
+
+  var CURSOR = () =>
+    new POSITION(cmView.state.selection.main.from)
+
+  window.POSITION = POSITION
+  window.LINE_COLUMN = LINE_COLUMN
+  window.CALLER = CALLER
+  window.CURSOR = CURSOR
+
+  // convenience shorthand
+  window.WRITE = (text) => CURSOR().WRITE(text)
+
   var Editor = ({ code, setCode, className }) => {
     const onUpdate = (update) => {
       if (update.docChanged) {
@@ -266,19 +332,9 @@
       })
 
       const view = new EditorView({ state: startState, parent: editor.current })
+      // TODO these execute after first code evaluation, so if editor code
+      // references cmView or calls WRITE etc. directly, it fails after reload.
       window.cmView = view
-
-      // TODO SCOPING KLUDGE TODO
-      window.WRITE = (text) => {
-        console.log('WRITE', text)
-        if (text) {
-          const pos = view.state.selection.main.from
-          view.dispatch({
-            changes: { from: pos, insert: text.toString() },
-            selection: { anchor: pos + text.toString().length },
-          })
-        }
-      }
 
       return () => {
         view.destroy()
