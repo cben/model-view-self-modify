@@ -28,22 +28,13 @@
     overflow: auto;
   }
 
-  .result-presentation.scroll div {
-    /* width: 100%; */
-    height: 8ex;
-    transition: all 0.2s;
-    interpolate-size: allow-keywords;
-  }
-
-  .result-presentation.scroll div:hover {
-    height: auto;
-  }
-
   kbd {
     outline: outset 1px;
     border-radius: 3px;
   }
 </style>
+
+<link rel="stylesheet" href="https://unpkg.com/@observablehq/inspector/dist/inspector.css" />
 
 <script type="importmap">
   {
@@ -62,6 +53,7 @@
       "@lezer/javascript": "https://unpkg.com/@lezer/javascript/dist/index.js",
       "@lezer/lr": "https://unpkg.com/@lezer/lr/dist/index.js",
       "@marijn/find-cluster-break": "https://unpkg.com/@marijn/find-cluster-break/src/index.js",
+      "@observablehq/inspector": "https://unpkg.com/@observablehq/inspector?module",
       "htm": "https://unpkg.com/htm/dist/htm.mjs",
       "preact": "https://unpkg.com/preact/dist/preact.mjs",
       "preact/hooks": "https://unpkg.com/preact/hooks/dist/hooks.mjs",
@@ -84,10 +76,13 @@
   import { defaultKeymap, indentWithTab } from '@codemirror/commands'
   import { javascript } from '@codemirror/lang-javascript'
 
+  import { Inspector } from '@observablehq/inspector'
+
   // -- Imports to be used by user code --
 
   window.html = html
   window.Component = Component
+  window.Inspector = Inspector
   // TODO: https://stackoverflow.com/questions/47978809/how-to-dynamically-execute-eval-javascript-code-that-contains-an-es6-module-re
   import _ from 'https://unpkg.com/lodash-es'
   window._ = _
@@ -268,6 +263,16 @@
     return html`<div className=${className} ref=${editor} />`
   }
 
+  var Inspect = ({ obj }) => {
+    const ref = useRef(null);
+    useEffect(() => {
+      // TODO: we're leaking Inspector instances on each render, is that OK?
+      const inspector = new Inspector(ref.current)
+      inspector.fulfilled(obj)
+    }, [])
+    return html`<div ref=${ref} />`
+  }
+
   var DisplayResult = ({ evalResult, err }) => {
     if (err) {
       let text
@@ -295,20 +300,6 @@
       </div>`
     }
 
-    let resultAsText = evalResult
-    try {
-      // Better support Set
-      const replacer = (_key, value) =>
-        value instanceof Set ? `Set([${[...value]}])` : value
-      resultAsText = typeof resultAsText + JSON.stringify(evalResult, replacer, 2)
-    } catch (err) {
-      resultAsText = `${resultAsText} // ${err}`
-    }
-    try {
-      resultAsText = resultAsText.toString()
-    } catch (err) {
-    }
-
     // React cares about functional vs. class component https://overreacted.io/how-does-react-tell-a-class-from-a-function/
     // but we don't, and as it happens in JS a class is just a 'function' with .prototype.
     const mayBeComponent = typeof evalResult === 'function'
@@ -333,7 +324,7 @@
             <th>As a React component:</th>
           `}
           <th>As a node:</th>
-          <th>As text:</th>
+          <th>As object:</th>
         </tr>
         <tr>
           ${mayBeComponent && html`
@@ -352,10 +343,8 @@
               <//>
             </div>
           </td>
-          <td class="result-presentation text ${mayBeNode(evalResult) && 'scroll'}">
-            <div>
-              <pre>${resultAsText}</pre>
-            </div>
+          <td class="result-presentation inspector">
+            <${Inspect} obj=${evalResult} />
           </td>
         </tr>
       </table>
