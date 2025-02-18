@@ -73,6 +73,7 @@
 
   import { EditorState, basicSetup } from '@codemirror/basic-setup'
   import { EditorView, keymap } from '@codemirror/view'
+  import { findColumn } from '@codemirror/state'
   import { defaultKeymap, indentWithTab } from '@codemirror/commands'
   import { javascript } from '@codemirror/lang-javascript'
 
@@ -91,13 +92,33 @@
 
   // --- https://stackoverflow.com/a/76452154/239657 ---
 
+  const GeneratorFunction = function* () { }.constructor;
+
+  // sourceURL pragma makes stack traces more readable.
+  var sourcePragma = '\n//# sourceURL=evaluated-code'
+
+  // NUMBERING: follow browser stack traces, 1:1-based lines and columns.
+
   // Firefox reports 1-based `lineNumber`, but also inserts `function anonymous(arg1, arg2` as line 1,
   // and `) {` as line 2 (see .toString() on successfully parsed functions). Measure instead of guessing!
   let functionLineOffset = 0
+  // level=0 is call site, level=1 is parent...  Results are 0-based.
+  var lineColumnFromStack = (stack, level) => {
+    // First line is Error type & message (can span more lines if it contains newlines).
+    // Looking for `evaluated-code:` skips that and counts stack frames, and only user's stack frames.
+    const matches = Array.from(stack.matchAll(/evaluated-code:(\d+):(\d+)?/g))
+    console.warn(matches)
+    const [whole, line, column] = matches[level]
+    return [Number(line) - functionLineOffset, Number(column) - 1]
+  }
   try {
-    Function('!@#$')
+    // new GeneratorFunction('!@#$' + sourcePragma)
+    const gen = new GeneratorFunction('throw Error(`foo\nbar\nbaz`)' + sourcePragma)
+    Array.from(gen())
   } catch (err) {
-    functionLineOffset = err.lineNumber
+    console.warn(err.lineNumber, lineColumnFromStack(err.stack, 0))
+    // Only good once — later lineColumnFromStack() already corrects for functionLineOffset
+    functionLineOffset = err.lineNumber - 1 || lineColumnFromStack(err.stack, 0)[0] - 1
   }
 
   // AFAICT GeneratorFunction syntax is strict superset of Function — can still use regular `return`.
@@ -108,11 +129,9 @@
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/Function
   //  - assignments without `var`/`let`/`const` do write to global namespace.
   var betterEvalFunction = code => {
-    const GeneratorFunction = function* () {}.constructor;
     let parsedFunc
     try {
-      // sourceURL pragma makes stack traces more readable.
-      parsedFunc = new GeneratorFunction(code + '\n//# sourceURL=evaluated-code')
+      parsedFunc = new GeneratorFunction(code + sourcePragma)
     } catch (err) {
       if (err instanceof SyntaxError) {
         // Goal: find & show responsible line directly in the message
@@ -122,10 +141,11 @@
         // Firefox, non-standard
         if (lineNumber !== undefined) {
           const line = lineNumber - functionLineOffset
+          // TODO: linkify line:column
           throw SyntaxError(
-            `${message} (at ${line + 1}:${columnNumber}):\n` +
-            `${lines[line] || ''}\n` +
-            (columnNumber === undefined ? '' : `${' '.repeat(columnNumber)}^`))
+            `${message} (at ${line}:${columnNumber}):\n` +
+            `${lines[line-1] || ''}\n` +
+            (columnNumber === undefined ? '' : `${' '.repeat(columnNumber - 1)}^`))
         }
 
         // Other browsers leave you in the dark :-(
@@ -134,7 +154,7 @@
         var lastLine
         for (lastLine = lines.length - 1; lastLine > 0; lastLine--) {
           try {
-            new Function(lines.slice(0, lastLine).join('\n')) // only parse, don't call
+            new GeneratorFunction(lines.slice(0, lastLine).join('\n')) // only parse, don't run
             // console.log('error disappeared')
             break
           } catch (err2) {
@@ -151,6 +171,10 @@
       }
       throw err
     }
+
+    // Run!
+    // If SyntaxError gets thrown here, leave it alone - above approach would be unsafe,
+    // and it might not even represent JS error (e.g. `htm` throws it for template syntax).
     return parsedFunc()
   }
 
@@ -173,7 +197,7 @@
       console.log('Evaluating...')
       const iterator = betterEvalFunction(code)
       // for..of would not collect a final `return`, so call `.next()` ourselves.
-      while(true) {
+      while (true) {
         const item = iterator.next()
         evalResults.push({ result: item.value })
         // Treating final `return` same as last `yield`.  TODO: trailing `undefined` if no return.
@@ -216,6 +240,7 @@
       </table>`
   }
 
+      const [line, column] = lineColumnFromStack(e.stack, level)
   var Editor = ({ code, setCode, className }) => {
     const onUpdate = (update) => {
       if (update.docChanged) {
@@ -283,7 +308,7 @@
         text = `${err.name}: ${err.message}\n\n${err.stack}`
       }
 
-      // TODO: line numbers in the stack are all by `functionLineOffset` :-(
+      // TODO: line numbers in the stack are all off by `functionLineOffset` :-(
 
       // Omit betterEvalFunction() and its callers from stack.
       // (This also handles SyntaxError not having any useful stack.)
@@ -352,6 +377,7 @@
   }
 
   var ShowError = ({ children }) =>
+    // TODO: linkify line:column
     html`<div style=${{ whiteSpace: 'pre-wrap', textAlign: 'left', fontFamily: 'monospace', color: '#a00' }}>
       ${children}
     </div>`;
