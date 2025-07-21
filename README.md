@@ -39,6 +39,7 @@ on essential complexity and walls between language/env authors | developer | end
 # HOW TO TRY
 
 1. https://model-view-self-modify.netlify.app/?load=tetris.js (or serve locally by e.g. `python3 -m http.server`).  
+   <iframe src="index.html?load=tetris.js" width=1600 height=600></iframe>
 2. Start moving "TIME TRAVEL" line up.
 3. Put editor cursor before it and start clicking [left] [right] [down] buttons to play from that moment.
 4. Put cursor inside `RCSet([...])` in `newGame.board`.  Start clicking board cells to mark them occupied.
