@@ -32,6 +32,10 @@
     outline: outset 1px;
     border-radius: 3px;
   }
+
+  f*[accesskey]:after {
+    content: " (" attr(accesskey) ")";
+  }
 </style>
 
 <link rel="stylesheet" href="https://unpkg.com/@observablehq/inspector/dist/inspector.css" />
@@ -57,6 +61,9 @@
       "htm": "https://unpkg.com/htm/dist/htm.mjs",
       "preact": "https://unpkg.com/preact/dist/preact.mjs",
       "preact/hooks": "https://unpkg.com/preact/hooks/dist/hooks.mjs",
+      "fdrandom": "https://unpkg.com/fdrandom",
+      "rand-seed": "https://unpkg.com/rand-seed/dist/es/index.js",
+      "seeded-rand": "https://unpkg.com/seeded-rand/dist/jsrand.js?module",
       "style-mod": "https://unpkg.com/style-mod/src/style-mod.js",
       "w3c-keyname": "https://unpkg.com/w3c-keyname/index.js",
       "crelt": "https://unpkg.com/crelt/index.js"
@@ -84,12 +91,15 @@
   window.html = html
   window.Component = Component
   window.Inspector = Inspector
+  // TODO: this does hashed seeding, no getState/setState.
+  import Rand, { PRNG } from 'rand-seed'
+  window.Rand = Rand
+  // import Srand from 'seeded-rand'
+  // window.Srand = Srand
   // TODO: https://stackoverflow.com/questions/47978809/how-to-dynamically-execute-eval-javascript-code-that-contains-an-es6-module-re
   import _ from 'https://unpkg.com/lodash-es'
   window._ = _
-  // import range from 'https://unpkg.com/lodash-es/range.js'
-  // window.range = range
-
+  
   // --- https://stackoverflow.com/a/76452154/239657 ---
 
   const GeneratorFunction = function* () { }.constructor
@@ -107,7 +117,6 @@
     // First line is Error type & message (can span more lines if it contains newlines).
     // Looking for `evaluated-code:` skips that and counts stack frames, and only user's stack frames.
     const matches = Array.from(stack.matchAll(/evaluated-code:(\d+):(\d+)?/g))
-    console.warn(matches)
     const [whole, line, column] = matches[level]
     return [Number(line) - functionLineOffset, Number(column) - 1]
   }
@@ -116,7 +125,7 @@
     const gen = new GeneratorFunction('throw Error(`foo\nbar\nbaz`)' + sourcePragma)
     Array.from(gen())
   } catch (err) {
-    console.warn(err.lineNumber, lineColumnFromStack(err.stack, 0))
+    // console.warn(err.lineNumber, lineColumnFromStack(err.stack, 0))
     // Only good once — later lineColumnFromStack() already corrects for functionLineOffset
     functionLineOffset = err.lineNumber - 1 || lineColumnFromStack(err.stack, 0)[0] - 1
   }
