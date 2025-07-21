@@ -92,7 +92,7 @@
 
   // --- https://stackoverflow.com/a/76452154/239657 ---
 
-  const GeneratorFunction = function* () { }.constructor;
+  const GeneratorFunction = function* () { }.constructor
 
   // sourceURL pragma makes stack traces more readable.
   var sourcePragma = '\n//# sourceURL=evaluated-code'
@@ -183,11 +183,11 @@
   var demoCode = 'return (props) => html`<a href="/">Hello!</a>`'
 
   var EditEvalRenderLoop = (props) => {
-    const [code, setCode] = useState(localStorage.getItem('code') || demoCode)
+    const [code, setCode] = useState(props.initialCode)
 
     const saveCode = (code) => {
-      console.log('saveCode')
-      localStorage.setItem('code', code)
+      console.log('saveCode to id:', props.localStorageId)
+      localStorage.setItem(props.localStorageId, code)
       setCode(code)
     }
 
@@ -338,14 +338,14 @@
 
       return () => {
         view.destroy()
-      };
+      }
     }, [])
 
     return html`<div className=${className} ref=${editor} />`
   }
 
   var Inspect = ({ obj }) => {
-    const ref = useRef(null);
+    const ref = useRef(null)
     useEffect(() => {
       // TODO: we're leaking Inspector instances on each render, is that OK?
       const inspector = new Inspector(ref.current)
@@ -436,29 +436,50 @@
     // TODO: linkify line:column
     html`<div style=${{ whiteSpace: 'pre-wrap', textAlign: 'left', fontFamily: 'monospace', color: '#a00' }}>
       ${children}
-    </div>`;
+    </div>`
 
   class ErrorBoundary extends Component {
-    state = {};
+    state = {}
 
     componentDidCatch(error, info) {
-      this.setState({ error: error.toString(), componentStack: info?.componentStack });
+      this.setState({ error: error.toString(), componentStack: info?.componentStack })
       console.warn(this.state)
     }
 
     render() {
-      const { error, componentStack } = this.state;
+      const { error, componentStack } = this.state
       if (error) {
         return html`<${ShowError}>
             ${error}
             ${componentStack}
-          <//>`;
+          <//>`
       }
 
-      return this.props.children;
+      return this.props.children
     }
   }
 
-
-  render(html`<${EditEvalRenderLoop} />`, document.body)
+  const loadUrl = new URLSearchParams(location.search).get('load')
+  var localStorageId = new URLSearchParams(location.search).get('id') || loadUrl || 'code'
+  console.log('localStorage from id:', localStorageId, 'got:', localStorage.getItem(localStorageId))
+  // Deliberately not distinguishing null from previously stored empty string.
+  // So deleting all code + reload is a way to get demoCode back.
+  var code = localStorage.getItem(localStorageId) || demoCode
+  if (loadUrl) {
+    console.log('fetching:', loadUrl)
+    fetch(loadUrl).then(response => {
+      response.text().then(text => {
+        if (!response.ok) {
+          throw new Error(`fetching \`${loadUrl}\`: HTTP ${response.status} ${response.statusText}`);
+        }
+        // TODO can overwrite user's work unconditionally!
+        render(html`<${EditEvalRenderLoop} initialCode=${text} localStorageId=${localStorageId} />`, document.body)
+      }).catch(reason => {
+        code = '/*\n' + reason.toString() + '\n*/\n\n' + code
+        render(html`<${EditEvalRenderLoop} initialCode=${code} localStorageId=${localStorageId} />`, document.body)
+      })
+    })
+  } else {
+    render(html`<${EditEvalRenderLoop} initialCode=${code} localStorageId=${localStorageId} />`, document.body)
+  }
 </script>

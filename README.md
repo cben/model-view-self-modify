@@ -38,13 +38,12 @@ on essential complexity and walls between language/env authors | developer | end
 
 # HOW TO TRY
 
-1. https://model-view-self-modify.netlify.app/ (or open `index.html` locally, or serve it by e.g. `python3 -m http.server`).  
-2. Paste the content of [tetris.js](tetris.js) into the editor.
-3. Start moving "TIME TRAVEL" line up.
-4. Put editor cursor before it and start clicking [left] [right] [down] buttons to play from that moment.
-5. Put cursor inside `RCSet([...])` in `newGame.board`.  Start clicking board cells to mark them occupied.
+1. https://model-view-self-modify.netlify.app/?load=tetris.js (or serve locally by e.g. `python3 -m http.server`).  
+2. Start moving "TIME TRAVEL" line up.
+3. Put editor cursor before it and start clicking [left] [right] [down] buttons to play from that moment.
+4. Put cursor inside `RCSet([...])` in `newGame.board`.  Start clicking board cells to mark them occupied.
 
-# Implementation things I learnet in 1st week of prototyping
+# Implementation things I learnt in 1st week of prototyping
 
 * localStorage is awesome for edit/reload development!
   2 lines for major quality of life improvement
