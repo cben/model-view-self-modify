@@ -183,11 +183,11 @@
   var demoCode = 'return (props) => html`<a href="/">Hello!</a>`'
 
   var EditEvalRenderLoop = (props) => {
-    const [code, setCode] = useState(localStorage.getItem('code') || demoCode)
+    const [code, setCode] = useState(props.initialCode)
 
     const saveCode = (code) => {
-      console.log('saveCode')
-      localStorage.setItem('code', code)
+      console.log('saveCode to id:', props.localStorageId)
+      localStorage.setItem(props.localStorageId, code)
       setCode(code)
     }
 
@@ -459,5 +459,27 @@
     }
   }
 
-  render(html`<${EditEvalRenderLoop} />`, document.body)
+  const loadUrl = new URLSearchParams(location.search).get('load')
+  var localStorageId = new URLSearchParams(location.search).get('id') || loadUrl || 'code'
+  console.log('localStorage from id:', localStorageId, 'got:', localStorage.getItem(localStorageId))
+  // Deliberately not distinguishing null from previously stored empty string.
+  // So deleting all code + reload is a way to get demoCode back.
+  var code = localStorage.getItem(localStorageId) || demoCode
+  if (loadUrl) {
+    console.log('fetching:', loadUrl)
+    fetch(loadUrl).then(response => {
+      response.text().then(text => {
+        if (!response.ok) {
+          throw new Error(`fetching \`${loadUrl}\`: HTTP ${response.status} ${response.statusText}`);
+        }
+        // TODO can overwrite user's work unconditionally!
+        render(html`<${EditEvalRenderLoop} initialCode=${text} localStorageId=${localStorageId} />`, document.body)
+      }).catch(reason => {
+        code = '/*\n' + reason.toString() + '\n*/\n\n' + code
+        render(html`<${EditEvalRenderLoop} initialCode=${code} localStorageId=${localStorageId} />`, document.body)
+      })
+    })
+  } else {
+    render(html`<${EditEvalRenderLoop} initialCode=${code} localStorageId=${localStorageId} />`, document.body)
+  }
 </script>
