@@ -15,9 +15,9 @@ Like "[event sourcing](https://martinfowler.com/eaaDev/EventSourcing.html)", hav
 
 [defunctionalize]: https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
 
-### What: a live coding JS environment, where _user actions call `WRITE(...)` to modify app source_:
+Now what if we represent the same user intent as code, not data, and actually append them into relevant place in app code?!
 
-What if we represent the same user intent as code, not data, and actually append them into relevant place in app code?!
+### What: a live coding JS environment, where _user actions call `WRITE(...)` to modify app source_:
 
 https://model-view-self-modify.netlify.app/?load=counter.js :
 <iframe src="index.html?load=counter.js" width=1600 height=300></iframe>
@@ -79,7 +79,8 @@ switch (action.type) {
 
 which adds ceremony & cognitive load.
 
-The "internal DSL" alternative is (1) define supported actions as regular Model → Model functions (2) chain them using regular function call syntax.
+The architecture I propose here is an "internal DSL" alternative.
+Supported actions are written as regular Model → Model functions; you chain them using regular function call syntax.
 
 ## Why (persistence): User's work deserves being 1st-class
 
@@ -94,20 +95,35 @@ graph LR
   end
 ```
 
-  This approach reduces it to only one.
+Our languages encourage us to store user's work in built-in data structures (lists, dicts etc.)
+but when code changes (or computer restarts), we discover developer's work was durable,
+but user's work is lost — unless we take explicit steps to serialize/deserialize it 😢.
+
+This approach reduces both to only one concept, on equal footing.
 
   - Think of an event-sourcing DB migration changing the format of past events,
     or a refactor changing Redux actions structure, invalidating the recorded history.
     Fixing those requires thinking of both "change" concepts at once :-/
+
+    In Redux devtools, you could download the actions log as JSON, process, and load new actions.  
+    It's tedious and in my dev experience I used to just discard the log.
     
     In this self-modify paradigm you get same issues — but _history is regular code_,
-    so regular "refactor after a function interface changed" skills apply.
+    so regular "debug / refactor after an API change" skills apply!  
+    (Including the option of keeping API compatibility)
 
 This does NOT magically solve the hard problems of schema evolution, which [Cambria](https://www.inkandswitch.com/cambria/) and [Subtext](https://www.subtext-lang.org/) are trying to attack.  
 
 > For example, many live programming techniques treat state as ephemeral and recreate it after every edit, but when the shape of longer-lived state changes then the illusion of liveness is shattered – hot reloading works until it doesn’t. — https://arxiv.org/pdf/2412.06269
 
 I punt on that hard problem and expect user=dev resolve conflicts, just in a conceptually simple way.
+
+## Why (purity): Lift mutation out of _language_ into _IDE_.
+
+1. 199x Browsers popularized what user sees being a pure function of DOM.
+2. 201x React popularized DOM being pure function of your data/state ("model").
+3. Given a live coding environment where the code you edit gets _re-evaluated on every edit_,  
+   we could move _all_ mutation out of the language!
 
 ```mermaid
 graph LR
@@ -121,17 +137,8 @@ graph LR
   u -->|💡| code
 ```
 
-1. 199x Browsers popularized what user sees being a pure function of DOM.
-2. 201x React popularized DOM being pure function of your data/state ("model").
-3. Given a live coding environment where the code you edit gets _re-evaluated on every edit_,  
-   we could move _all_ mutation out of the language!
-   
-
-   - [ ] (TODO: to scale this [needs](https://www.joelonsoftware.com/2001/12/11/back-to-basics/) caching of intermediate results, but full re-run works for a PoC.)
-
-> Prior art: My attempts to google ideas like "purely functional self-modifying code" led nowhere, what with self-modifying code being shunned even in imperative circles for _being hard to reason about_ :-)  
-> However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](https://youtu.be/5rg7xvTJ8SU?t=91)).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel leaves user in control  
-
+Prior art: My attempts to google ideas like "purely functional self-modifying code" led nowhere, what with self-modifying code being shunned even in imperative circles for _being hard to reason about_ :-)  
+However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](https://youtu.be/5rg7xvTJ8SU?t=91)).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel lets user fully edit the spreadsheet you got after invoking macros.
 
 # Putting it all together: Tetris
 
@@ -148,10 +155,10 @@ graph LR
 If you want to edit freely, drop the `?load=...` from URL, otherwise your edits get overwritten on reload.
 You can append different `?id=...` to keep separate projects in browser localStorage.
 
-## Who is this for?
+# Conclusion: Who is this for?
 
 TBH, I don't know.  
-**Cons:** The null hypothesis remains that self-modifying code is to be minimized not embraced, the ⚠ security worries are real, and without smart cachiing performance will decline O(n²)...
+**Cons:** The null hypothesis remains that self-modifying code is to be minimized not embraced, the ⚠ security worries are real, and without smart caching performance will decline O(n²)...
 
 🤪 Could this be a stepping stone for **beginner** programmers making home-cooked, offline, single-user apps?!  
 **Pros:** It's radically minimalistic: It leverages a mental model they need _anyway_ — how changed code gets re-run — to model user interaction too.  
@@ -160,9 +167,9 @@ Most important to me, it'd spread the subversive ideas that code _is_ data _is_ 
 
 Can they later learn saner but more complex practices?  Or would it leave them "mentally mutilated beyond hope of regeneration"? Shrug. Yes my first PC exposure was to BASIC, and it was fun ;-)
 
-# Future
+**Challange**: If you hate this, I hope it helps you come up with something safer & less crazy that achieves _similar simplicity_.
 
-* finish the Tetris
+# TODO Future
 
 * look for max opportunities to use WRITE() during coding - "moldable development"
   - "level editor" kind of stuff
@@ -189,7 +196,13 @@ but more important:
 
 * Try React "fast refresh" API to replace re-defined components in-place?
 
-## TODO: Language qualities that'd make this work better?
+### Q: Multi-player?
+
+Since both logic & user actions are stored in same text form, it's tempting to add collaborative editing and gain distributed state _for free_?
+
+I want to try it, but it may well be a dead end.  In particular, the free-form source makes it **impractical to enforce any kinds of permissions**; to interact you need permission to edit, and if you can edit you can cheat.
+
+### Q: Language qualities that'd make this work better?
 
 Is this really language agnostic?  Kinda, but some language affordances may help:
 
@@ -198,11 +211,11 @@ Is this really language agnostic?  Kinda, but some language affordances may help
   Specifically, parametrizing inserted code should use safe templating rather than string interpolation to reduce risks of injection.
 - immutable semantics conductive to incremental re-computation.
 
-# Prior Art
+# More prior art
 
 The core idea is so simple that I'm sure many people independently discovered it before, but I'm not aware of an agreed upon term to search...
 
-Perhaps my main contribution will be "Model View Self-Modify", and the explanation by comparison to now widely understood MVU architecture.
+Perhaps my main contribution will be "Model View Self-Modify" name, and the explanation by comparison to now widely understood MVU architecture.
 
 - Typst aspires to be a better TeX, designed for fast incremental rendering.  Typst creators used a very similar approach to make "interactive" games [icicle](https://typst.app/universe/package/icicle/) & [badformer](https://typst.app/universe/package/badformer/), where user types a sequence of WASD letters & documented is re-rendered each time.  Also picked up in community [soviet-matrix package](https://github.com/YouXam/soviet-matrix) implementating Tetris.
 
