@@ -15,9 +15,9 @@ Like "[event sourcing](https://martinfowler.com/eaaDev/EventSourcing.html)", hav
 
 [defunctionalize]: https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
 
-Now what if we represent the same user intent as code, not data, and actually append them into relevant place in app code?!
+### What I built: a live coding JS environment, where _user actions call `WRITE(...)` to modify app source_:
 
-### What: a live coding JS environment, where _user actions call `WRITE(...)` to modify app source_:
+Now what if we represent the same user intent as code, not data, and actually append them into relevant place in app code?!
 
 https://model-view-self-modify.netlify.app/?load=counter.js :
 <iframe src="index.html?load=counter.js" width=1600 height=300></iframe>
@@ -117,6 +117,10 @@ This does NOT magically solve the hard problems of schema evolution, which [Camb
 > For example, many live programming techniques treat state as ephemeral and recreate it after every edit, but when the shape of longer-lived state changes then the illusion of liveness is shattered – hot reloading works until it doesn’t. — https://arxiv.org/pdf/2412.06269
 
 I punt on that hard problem and expect user=dev resolve conflicts, just in a conceptually simple way.
+
+Prior art: LISPs, Smalltalk, Self famously unified code & user's work in a single persistent "image" of data structures.
+Here I'm unifying in the other direction, storing both as textual code.  
+Cf. also [Jamie Brandon's on runtime state vs. legibility tradeoffs](https://www.scattered-thoughts.net/writing/there-are-no-strings-on-me/).
 
 ## Why (purity): Lift mutation out of _language_ into _IDE_.
 
