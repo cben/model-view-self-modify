@@ -43,7 +43,7 @@ var Test = (name, func) => {
     func()
   } catch (e) {
     return html`${jump} 💥 ${e.name}: ${e.message}<br/>
-    // TODO: .stack line numbers don't match editor numbering by functionLineOffset
+    // TODO: .stack line numbers don't match editor numbering by \`functionLineOffset\`<br/>
     ${e.stack.split('\n')[0]}`
   }
   if (testFailures.length > 0) {

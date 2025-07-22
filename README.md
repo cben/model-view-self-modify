@@ -1,6 +1,6 @@
-> This README is better viewed [online](https://model-view-self-modify.netlify.app/README.html) with interactive iframes, then on github.
+> This README is better viewed [online](https://model-view-self-modify.netlify.app/README.html) with interactive iframes, than on github.
 >
-> You can `git clone https://github.com/cben/model-view-self-modify` and serve locally by e.g. `python3 -m http.server` but current implementation won't load offline.
+> You can also `git clone https://github.com/cben/model-view-self-modify` and serve locally by e.g. `python3 -m http.server` but current implementation won't load offline (I used CDNs).
 
 # what: Model |> View |> Self-Modify architecture
 
@@ -15,34 +15,53 @@ Like "[event sourcing](https://martinfowler.com/eaaDev/EventSourcing.html)", hav
 
 [defunctionalize]: https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
 
-### a live coding JS environment, where _user actions call `WRITE(...)` to modify app source_
+### What: a live coding JS environment, where _user actions call `WRITE(...)` to modify app source_:
 
 What if we represent the same user intent as code, not data, and actually append them into relevant place in app code?!
 
 https://model-view-self-modify.netlify.app/?load=counter.js :
-<iframe src="index.html?load=counter.js" width=1600 height=600></iframe>
+<iframe src="index.html?load=counter.js" width=1600 height=300></iframe>
 
 This is a bad idea in many ways (⚠ including security!) but it challenges assumptions on essential complexity and walls between language/env authors | developer | end-user.
 
-## Who is this for?
+## Why: Reduce barriers between app "end user" / developer
 
-TBH, I don't know.  
-**Cons:** The null hypothesis remains that self-modifying code is to be minimized not embraced, the ⚠ security worries are real, and without smart cachiing performance will decline O(n²)...
+First, note the live environment responsible for re-evaluating code upon every change and rendering the result is no longer a "dev tool" — it's now essential part of the app **runtime**.  
+(Distributing dev env to ALL users may feel weird in compiler circles, but is 100% normal in Excel circles.)
 
-🤪 Could this be a stepping stone for **beginner** programmers making home-cooked, offline, single-user apps?!  
-**Pros:** It's radically minimalistic: It leverages a mental model they need _anyway_ — how changed code gets re-run — to model user interaction too.  
-It smuggles some "advanced" practices like unidirection data flow & event sourcing, with minimal ceremony.  
-Most important to me, it'd spread the subversive ideas that code _is_ data _is_ code, that "using" _is_ "programming", that any UI forms a [weak] language, and that tools should be moldable.
+The source could be hidden by default, but it does give user some powers!  First, undo/redo for free.
 
-Can they later learn saner but more complex practices?  Or would it leave them "mentally mutilated beyond hope of regeneration"? Shrug. Yes my first PC exposure was to BASIC, and it was fun ;-)
+- Is time-travel debugging important for end-users?  I think it varies by domain.  
+  For example, if your "program" is algebraic chess notation, these were being published in journals for the sole purpose of "users" replaying them step-by-step (on wooden boards — that language got standardized before computers were invented!) to look for "bugs" & "fixes" during "execution"   😉
 
-## Why: Reduce barriers between app "end user" / app developer / IDE developer
+Prior Art: Graphite.rs image editor has [language-centric architecture](https://www.youtube.com/watch?v=ZUbcwUC5lxA), IIUC any direct manipulation creates re-playable scene graph nodes that are exposed to user.
 
-If user-facing UI actually edits (well, inserts) code, same skills translate to developer making mini-UIs for themself!  
+## Why: Reduce barriers between app developer / IDE developer
 
-- TDD helpers: visualize pass/fail/rich results, button to jump to failing test...  
-  _Help yourself_ to [Babylonian-style Programming](https://arxiv.org/abs/1902.00549) without hard-wired IDE support?
-- Level/asset editors...  Poor man's [livelits](https://doi.org/10.1145/3462276) (side-by-side with code, not actually inline)...
+If user-facing UI actually edits (well, inserts) code, same skills translate to developer making mini-UIs for themself!
+
+- TDD helpers: visualize pass/fail/rich results, button to jump to failing test:
+
+  https://model-view-self-modify.netlify.app/?load=test-helpers.js :
+
+  - [ ] TODO BUG: if you see `cmView is not defined`, edit the left side in any way
+
+  <iframe src="index.html?load=test-helpers.js" width=1600 height=500></iframe>
+
+- _Help yourself_ to [Babylonian-style Programming](https://arxiv.org/abs/1902.00549) without hard-wired IDE support?  Call a function, render the results.  Write examples as part of the language, not special metadata.
+
+- Literate/notebook helpers?  Below in Tetris example, the code & outputs became long and I added `H1()`, `H2()` functions that render a large heading and sync cursor to source location.
+
+- Level/asset editors.  Below in Tetris example, I express the tetraminoes as arrays e.g.
+  ```
+  [1,0], [1,1], [1,2], [1,3], 
+  ```
+  When rendering boards, I've wired all cells to (1) show coordinates (2) insert coordinates at cursor when clicked.  This allowed me to "draw" the shapes by clicking.
+
+  Prior art: [livelits](https://doi.org/10.1145/3462276) render custom UIs inline in code.  
+  Can we say here we have "poor man's livelits", only rendering side-by-side with code? Still useful.
+
+Prior Art: [mage: Fluid Moves Between Code and Graphical Work in Computational Notebooks](https://marybethkery.com/projects/Verdant/mage.pdf) prototyped a Jupyter extension that lets UI user actions to edit back the cell's code.
 
 ## Why: internal/external DSL perspective
 
@@ -58,18 +77,11 @@ switch (action.type) {
    case 'rotateRight': ...
 ```
 
-This adds ceremony & cognitive load.  The "internal DSL" alternative is (1) define regular model → model function calls.
+which adds ceremony & cognitive load.
 
-- Now add functions that take model and return new model.
-- _If_ user were willing to type function calls into editor, you're done ;-)
-  This is an _internal DSL_ approach to interaction: Model + View is all you need, and you can be purely
-  functional without any in-language approach to state (like in spreadsheets).
+The "internal DSL" alternative is (1) define supported actions as regular Model → Model functions (2) chain them using regular function call syntax.
 
-- To make it friendlier, classical UI explicitly reads events, translates them to state changes —
-  i.e. treats user input as _external DSL_.  Don't do that!  
-  _Instead, translate user actions to changes in the source editor_ — which trigger re-computation.
-
-## Why: make user state 1st-class
+## Why (persistence): User's work deserves being 1st-class
 
 Traditional developer (especially one attempting event sourcing / time travel / record-replay live coding)
 needs two concepts of stateful change: changing state inside the app, but also changing the app source.
@@ -91,7 +103,10 @@ graph LR
     In this self-modify paradigm you get same issues — but _history is regular code_,
     so regular "refactor after a function interface changed" skills apply.
 
-TODO: stress does NOT solve schema evolution like cambria!  
+This does NOT magically solve the hard problems of schema evolution, which [Cambria](https://www.inkandswitch.com/cambria/) and [Subtext](https://www.subtext-lang.org/) are trying to attack.  
+
+> For example, many live programming techniques treat state as ephemeral and recreate it after every edit, but when the shape of longer-lived state changes then the illusion of liveness is shattered – hot reloading works until it doesn’t. — https://arxiv.org/pdf/2412.06269
+
 I punt on that hard problem and expect user=dev resolve conflicts, just in a conceptually simple way.
 
 ```mermaid
@@ -114,12 +129,15 @@ graph LR
 
    - [ ] (TODO: to scale this [needs](https://www.joelonsoftware.com/2001/12/11/back-to-basics/) caching of intermediate results, but full re-run works for a PoC.)
 
-My attempts to google prior art like "purely functional self-modifying code" led nowhere, what with self-modifying code being shunned even in imperative circles for _being hard to reason about_ :-)  
+> Prior art: My attempts to google ideas like "purely functional self-modifying code" led nowhere, what with self-modifying code being shunned even in imperative circles for _being hard to reason about_ :-)  
+> However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](https://youtu.be/5rg7xvTJ8SU?t=91)).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel leaves user in control  
 
 
 # Putting it all together: Tetris
 
 1. https://model-view-self-modify.netlify.app/?load=tetris.js
+
+   - [ ] TODO BUG: if you see `cmView is not defined`, edit the left side in any way
 
    <iframe src="index.html?load=tetris.js" width=1600 height=600></iframe>
 
@@ -129,6 +147,18 @@ My attempts to google prior art like "purely functional self-modifying code" led
 
 If you want to edit freely, drop the `?load=...` from URL, otherwise your edits get overwritten on reload.
 You can append different `?id=...` to keep separate projects in browser localStorage.
+
+## Who is this for?
+
+TBH, I don't know.  
+**Cons:** The null hypothesis remains that self-modifying code is to be minimized not embraced, the ⚠ security worries are real, and without smart cachiing performance will decline O(n²)...
+
+🤪 Could this be a stepping stone for **beginner** programmers making home-cooked, offline, single-user apps?!  
+**Pros:** It's radically minimalistic: It leverages a mental model they need _anyway_ — how changed code gets re-run — to model user interaction too.  
+It smuggles some "advanced" practices like unidirection data flow & event sourcing, with minimal ceremony.  
+Most important to me, it'd spread the subversive ideas that code _is_ data _is_ code, that "using" _is_ "programming", that any UI forms a [weak] language, and that tools should be moldable.
+
+Can they later learn saner but more complex practices?  Or would it leave them "mentally mutilated beyond hope of regeneration"? Shrug. Yes my first PC exposure was to BASIC, and it was fun ;-)
 
 # Future
 
@@ -170,14 +200,11 @@ Is this really language agnostic?  Kinda, but some language affordances may help
 
 # Prior Art
 
-The core idea is so simple that I'm sure many people independently discovered it before, but I'm not aware of an agreed upon term to search...  
-
+The core idea is so simple that I'm sure many people independently discovered it before, but I'm not aware of an agreed upon term to search...
 
 Perhaps my main contribution will be "Model View Self-Modify", and the explanation by comparison to now widely understood MVU architecture.
 
-TODO split into relevant "Why" aspects above?
-- Graphite.rs image editor with [language-centric architecture](https://www.youtube.com/watch?v=ZUbcwUC5lxA)
-- TAPE https://www.youtube.com/watch?v=drNgClYXEzc&list=PLyrlk8Xaylp7qvYybMfyApufV0HWfbwi-&index=10
-- [mage: Fluid Moves Between Code and Graphical Work in Computational Notebooks](https://marybethkery.com/projects/Verdant/mage.pdf) prototyped a Jupyter extension that lets UI user actions to edit back the cell's code.
 - Typst aspires to be a better TeX, designed for fast incremental rendering.  Typst creators used a very similar approach to make "interactive" games [icicle](https://typst.app/universe/package/icicle/) & [badformer](https://typst.app/universe/package/badformer/), where user types a sequence of WASD letters & documented is re-rendered each time.  Also picked up in community [soviet-matrix package](https://github.com/YouXam/soviet-matrix) implementating Tetris.
 
+- https://jamesbvaughan.com/bidirectional-editing/ prototypes a widget wired to edit source code over LSP.  Excellent idea to decouple behavior of mutable code from choice of editor!
+  - Jason McGhee shared several [related projects](https://news.ycombinator.com/item?id=44437770).

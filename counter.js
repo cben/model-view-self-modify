@@ -1,6 +1,7 @@
 const model = 0
   + 1 + 1
-// PUT CURSOR ABOVE BEFORE CLICKING "increment" / "decrement"
+// PUT CURSOR ABOVE BEFORE CLICKING "increment" / "decrement".
+// If you mess up, use Ctrl+Z / Ctrl+Shift+Z.
 
 const View = (model) => html`<div>
     <h1>${model}</h1>
