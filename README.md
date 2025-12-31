@@ -22,7 +22,49 @@ Now what if we represent the same user intent as code, not data, and actually ap
 https://model-view-self-modify.netlify.app/?load=counter.js :
 <iframe src="index.html?load=counter.js" width=1600 height=300></iframe>
 
-This is a bad idea in many ways (⚠ including security!) but it challenges assumptions on essential complexity and walls between language/env authors | developer | end-user.
+This is a questionable idea in many ways (⚠ including security!) but it challenges assumptions on essential complexity and walls between language/env authors | developer | end-user.
+
+## Why (persistence): User's work deserves being 1st-class
+
+Traditional developer (especially one attempting event sourcing / time travel / record-replay live coding)
+needs two concepts of stateful change: changing state inside the app, but also changing the app source.
+
+```mermaid
+graph LR
+  code --> runtime --> developer ==> code
+  subgraph runtime
+     state --> view --> action ==> state
+  end
+```
+
+Our languages encourage us to store user's work in built-in data structures (lists, dicts etc.)
+but when process dies or code changes, we discover developer's work was durable,
+but user's work is lost — and we need a whole other toolbag (file I/O, serialization, pointer swizzling, networked storage APIs, databases, ORMs...) to tackle that 🤕.
+
+This approach reduces both to only one concept, on equal footing.
+
+  - Think of an event-sourcing DB migration changing the format of past events,
+    or a refactor changing Redux actions structure, invalidating the recorded history.
+    Fixing those requires thinking of both "change" concepts at once :-/
+
+    In Redux devtools, you could download the actions log as JSON, process, and load new actions.  
+    It's tedious and in my dev experience I used to just discard the log.
+    
+    In this self-modify paradigm you get same issues — but _history is regular code_,
+    so regular "debug / refactor after an API change" skills apply!  
+    (Including the option of keeping API compatibility)
+
+This does NOT magically solve the hard problems of schema evolution, which [Cambria](https://www.inkandswitch.com/cambria/) and [Subtext](https://www.subtext-lang.org/) are trying to attack:
+
+> For example, many live programming techniques treat state as ephemeral and recreate it after every edit, but when the shape of longer-lived state changes then the illusion of liveness is shattered – hot reloading works until it doesn’t. — https://arxiv.org/pdf/2412.06269
+
+I punt on that hard problem and expect user=dev resolve conflicts, just in a conceptually simple way.
+
+Prior art: LISPs, Smalltalk, Self famously unified code & user's work in a single persistent "image" of data structures.  
+Here I'm unifying in the other direction, storing both as textual code - this direction is _under-explored_!  
+Cf. also [Jamie Brandon's on runtime state vs. legibility tradeoffs](https://www.scattered-thoughts.net/writing/there-are-no-strings-on-me/).
+
+- TODO: Why I focus on appending actions instead of replacing state in-place?
 
 ## Why: Reduce barriers between app "end user" / developer
 
@@ -82,52 +124,12 @@ which adds ceremony & cognitive load.
 The architecture I propose here is an "internal DSL" alternative.
 Supported actions are written as regular Model → Model functions; you chain them using regular function call syntax.
 
-## Why (persistence): User's work deserves being 1st-class
-
-Traditional developer (especially one attempting event sourcing / time travel / record-replay live coding)
-needs two concepts of stateful change: changing state inside the app, but also changing the app source.
-
-```mermaid
-graph LR
-  code --> runtime --> developer ==> code
-  subgraph runtime
-     state --> view --> action ==> state
-  end
-```
-
-Our languages encourage us to store user's work in built-in data structures (lists, dicts etc.)
-but when code changes (or computer restarts), we discover developer's work was durable,
-but user's work is lost — unless we take explicit steps to serialize/deserialize it 😢.
-
-This approach reduces both to only one concept, on equal footing.
-
-  - Think of an event-sourcing DB migration changing the format of past events,
-    or a refactor changing Redux actions structure, invalidating the recorded history.
-    Fixing those requires thinking of both "change" concepts at once :-/
-
-    In Redux devtools, you could download the actions log as JSON, process, and load new actions.  
-    It's tedious and in my dev experience I used to just discard the log.
-    
-    In this self-modify paradigm you get same issues — but _history is regular code_,
-    so regular "debug / refactor after an API change" skills apply!  
-    (Including the option of keeping API compatibility)
-
-This does NOT magically solve the hard problems of schema evolution, which [Cambria](https://www.inkandswitch.com/cambria/) and [Subtext](https://www.subtext-lang.org/) are trying to attack.  
-
-> For example, many live programming techniques treat state as ephemeral and recreate it after every edit, but when the shape of longer-lived state changes then the illusion of liveness is shattered – hot reloading works until it doesn’t. — https://arxiv.org/pdf/2412.06269
-
-I punt on that hard problem and expect user=dev resolve conflicts, just in a conceptually simple way.
-
-Prior art: LISPs, Smalltalk, Self famously unified code & user's work in a single persistent "image" of data structures.
-Here I'm unifying in the other direction, storing both as textual code.  
-Cf. also [Jamie Brandon's on runtime state vs. legibility tradeoffs](https://www.scattered-thoughts.net/writing/there-are-no-strings-on-me/).
-
-## Why (purity): Lift mutation out of _language_ into _IDE_.
+## Why (purity): Lift mutation out of _language_ into _IDE_?
 
 1. 199x Browsers popularized what user sees being a pure function of DOM.
 2. 201x React popularized DOM being pure function of your data/state ("model").
 3. Given a live coding environment where the code you edit gets _re-evaluated on every edit_,  
-   we could move _all_ mutation out of the language!
+   we could move _all_ mutation out of the language!?
 
 ```mermaid
 graph LR
@@ -140,6 +142,12 @@ graph LR
   u(user affects) -..-x|MVU| state
   u -->|💡| code
 ```
+
+- However, I'm now experimenting with having "pointers" into source code locations.  Redux is weird in using messages without a "receiver"; e.g. if you want to model 2 concurrent games, you have to change your messages to include "which game" field — not modular like OOP.  Here, it'd be saner to say "New game" button appends a new function, and actions in each game append changes to that function.
+
+  Well, once you're passing around your code objects that represent different place where you can mutate source code, is that really meaningful to claim the mutation happens outside the language semantics?  No.
+
+  => A more useful perspective is not formal "purity" but pragmatic [Functional Core, Imperative Shell](https://www.destroyallsoftware.com/screencasts/catalog/functional-core-imperative-shell).
 
 Prior art: My attempts to google ideas like "purely functional self-modifying code" led nowhere, what with self-modifying code being shunned even in imperative circles for _being hard to reason about_ :-)  
 However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](https://youtu.be/5rg7xvTJ8SU?t=91)).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel lets user fully edit the spreadsheet you got after invoking macros.
@@ -162,11 +170,11 @@ You can append different `?id=...` to keep separate projects in browser localSto
 # Conclusion: Who is this for?
 
 TBH, I don't know.  
-**Cons:** The null hypothesis remains that self-modifying code is to be minimized not embraced, the ⚠ security worries are real, and without smart caching performance will decline O(n²)...
+**Cons:** The null hypothesis remains that self-modifying code is to be minimized not embraced, the ⚠ security worries are real, and without incremental computation performance will decline O(n²)...
 
 🤪 Could this be a stepping stone for **beginner** programmers making home-cooked, offline, single-user apps?!  
 **Pros:** It's radically minimalistic: It leverages a mental model they need _anyway_ — how changed code gets re-run — to model user interaction too.  
-It smuggles some "advanced" practices like unidirection data flow & event sourcing, with minimal ceremony.  
+It smuggles some "advanced" practices like unidirectional data flow & event sourcing, with minimal ceremony.  
 Most important to me, it'd spread the subversive ideas that code _is_ data _is_ code, that "using" _is_ "programming", that any UI forms a [weak] language, and that tools should be moldable.
 
 Can they later learn saner but more complex practices?  Or would it leave them "mentally mutilated beyond hope of regeneration"? Shrug. Yes my first PC exposure was to BASIC, and it was fun ;-)
