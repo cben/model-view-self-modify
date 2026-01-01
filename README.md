@@ -1,4 +1,4 @@
-> This README is better viewed [online](https://model-view-self-modify.netlify.app/README.html) with interactive iframes, than on github.
+> This README is better viewed [online](https://model-view-self-modify.netlify.app/README.html) with interactive iframes, than on [github](https://github.com/cben/model-view-self-modify).
 >
 > You can also `git clone https://github.com/cben/model-view-self-modify` and serve locally by e.g. `python3 -m http.server` but current implementation won't load offline (I used CDNs).
 
@@ -21,6 +21,8 @@ Now what if we represent the same user intent as code, not data, and actually ap
 
 https://model-view-self-modify.netlify.app/?load=counter.js :
 <iframe src="index.html?load=counter.js" width=1600 height=300></iframe>
+
+🖉🗃  To edit your own code(s) and persist after reload, open [without `?load=` param](https://model-view-self-modify.netlify.app/?id=you_pick_whatever); each `?id=...` you pick is independent.
 
 This is a questionable idea in many ways (⚠ including security!) but it challenges assumptions on essential complexity and walls between language/env authors | developer | end-user.
 
@@ -164,7 +166,7 @@ However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](
 3. Put editor cursor before it and start clicking [left] [right] [down] buttons to play from that moment.
 4. Put cursor inside `RCSet([...])` in `newGame.board`.  Start clicking board cells to mark them occupied.
 
-If you want to edit freely, drop the `?load=...` from URL, otherwise your edits get overwritten on reload.
+🖉🗃  If you want to edit freely, drop the `?load=...` from URL, otherwise your edits get overwritten on reload.
 You can append different `?id=...` to keep separate projects in browser localStorage.
 
 # Conclusion: Who is this for?

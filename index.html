@@ -189,7 +189,7 @@
 
   // ---
 
-  var demoCode = 'return (props) => html`<a href="/">Hello!</a>`'
+  var demoCode = 'yield (props) => html`<a href="/">Hello!</a>`\n\n// Add ?id=... to URL to keep separate projects in browser localStorage.'
 
   var EditEvalRenderLoop = (props) => {
     const [code, setCode] = useState(props.initialCode)
