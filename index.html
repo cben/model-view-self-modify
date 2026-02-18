@@ -290,7 +290,10 @@
     // console.log('LC', line, column)
     const { from, text } = cmView.state.doc.line(line)
     // CodeMirror counts lines from 1 but columns from 0.
-    POSITION.call(this, from + findColumn(text, column - 1))
+    // TODO: `from + findColumn(text, column - 1)` would account for Tab characters,
+    //   using "visual" columns that make more sense with Tab/Space indentation.
+    //   But it makes pos<->line,column round tripping more fragile, for now counting tab as 1.
+    POSITION.call(this, from + column - 1)
     // for debugging
     this.line = line
     this.column = column
