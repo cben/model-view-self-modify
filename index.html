@@ -262,7 +262,7 @@
 
     // bind methods so e.g. CURSOR().WRITE can be passed around...
     this.WRITE = ((text) => {
-      console.log(this.pos, 'WRITE', text)
+      console.log('pos=', this.pos, 'WRITE', text)
       if (text) {
         this.cmView.dispatch({
           changes: { from: this.pos, insert: text.toString() },
@@ -273,7 +273,7 @@
     }).bind(this)
 
     this.JUMP = () => {
-      console.log(this.pos, 'JUMP')
+      console.log('pos=', this.pos, 'JUMP')
       this.cmView.dispatch({
         selection: { head: this.pos, anchor: this.pos },
         scrollIntoView: true,
@@ -282,18 +282,20 @@
     }
   }
 
+  /** line, column both 1-based (matching unix tradition). */
   function LINE_COLUMN(line, column) {
     if (!(this instanceof LINE_COLUMN)) {
       return new LINE_COLUMN(line, column)
     }
     // console.log('LC', line, column)
     const { from, text } = cmView.state.doc.line(line)
-    // CodeMirror in counts lines from 1 but columns from 0.
+    // CodeMirror counts lines from 1 but columns from 0.
     POSITION.call(this, from + findColumn(text, column - 1))
     // for debugging
     this.line = line
     this.column = column
   }
+  // subclass POSITION
   LINE_COLUMN.prototype.__proto__ = POSITION.prototype
   LINE_COLUMN.__proto__ = POSITION
 
@@ -305,8 +307,11 @@
     }
   }
 
-  var CURSOR = () =>
-    new POSITION(cmView.state.selection.main.from)
+  var CURSOR = () => {
+    const head = cmView.state.selection.main.head
+    const { number, from } = cmView.state.doc.lineAt(head)
+    return LINE_COLUMN(number, head - from + 1)
+  }
 
   window.POSITION = POSITION
   window.LINE_COLUMN = LINE_COLUMN
