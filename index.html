@@ -11,6 +11,7 @@
   .cm-editor.cm-focused {
     outline: 2px dashed purple;
   }
+
   .cm-editor:not(.cm-focused) .cm-cursor {
     display: block !important;
     opacity: 60%;
@@ -84,6 +85,7 @@
 
   import { EditorState, basicSetup } from '@codemirror/basic-setup'
   import { EditorView, keymap } from '@codemirror/view'
+  import { SearchCursor, RegExpCursor } from "@codemirror/search"
   import { findColumn } from '@codemirror/state'
   import { defaultKeymap, indentWithTab } from '@codemirror/commands'
   import { javascript } from '@codemirror/lang-javascript'
@@ -103,8 +105,9 @@
   // TODO: https://stackoverflow.com/questions/47978809/how-to-dynamically-execute-eval-javascript-code-that-contains-an-es6-module-re
   import _ from 'https://unpkg.com/lodash-es'
   window._ = _
+  window.RegExpCursor = RegExpCursor
 
-  // --- https://stackoverflow.com/a/76452154/239657 ---
+  // --- Eval helpers https://stackoverflow.com/a/76452154/239657 ---
 
   const GeneratorFunction = function* () { }.constructor
 
@@ -191,7 +194,7 @@
     return parsedFunc()
   }
 
-  // ---
+  // --- EditEvalRenderLoop component ---
 
   var demoCode = 'yield (props) => html`<a href="/">Hello!</a>`\n\n// Add ?id=... to URL to keep separate projects in browser localStorage.'
 
@@ -233,7 +236,9 @@
             code=${code} setCode=${saveCode}
           />
           <p>Use <code>yield ...</code> and/or <code>return ...</code> statements.
-             To move focus outside editor, press <kbd>Esc</kbd> then <kbd>Tab</kbd>.</p>
+             No JSX, instead use <a href="https://github.com/developit/htm" target="blank"><code>${'html`<tag ${...}>`'}</code> notation</a>.
+             To move focus outside editor, press <kbd>Esc</kbd> then <kbd>Tab</kbd>.
+          </p>
         </td>
         <td>
           <div class="results">
@@ -253,14 +258,16 @@
       </table>`
   }
 
-  // TODO SCOPING KLUDGE: these rely on global `cmView` set inside `Editor`
-
+  // --- Code self-modification "anchors" & action methods (WRITE, JUMP) ---
   // convention: self-modify helpers are UPPERCASE.
-  // function rather than `class` to avoid need for `new`.
+
+  // functions rather than `class` to avoid need for `new`.
   function POSITION(pos) {
     if (!(this instanceof POSITION)) {
       return new POSITION(pos)
     }
+    // TODO SCOPING KLUDGE: these rely on global `cmView` set inside `Editor`.
+    //   For now preferring `cmView` to `this.cmView` until #8 is solved.
     this.cmView = window.cmView
 
     // Override this method in subclasses for late-binding
@@ -271,7 +278,7 @@
       const pos = this.pos()
       console.log(this, 'pos() =', pos, 'WRITE', text)
       if (text) {
-        this.cmView.dispatch({
+        cmView.dispatch({
           changes: { from: pos, insert: text.toString() },
           // move cursor after inserted text.
           selection: { anchor: pos + text.toString().length },
@@ -282,12 +289,17 @@
     this.JUMP = (() => {
       const pos = this.pos()
       console.log(this, 'pos() =', pos, 'JUMP')
-      this.cmView.dispatch({
+      cmView.dispatch({
         selection: { head: pos, anchor: pos },
         scrollIntoView: true,
       })
-      this.cmView.focus()
+      cmView.focus()
     }).bind(this)
+  }
+
+  var classExtendsBase = (subClass, baseClass) => {
+    Object.setPrototypeOf(subClass.prototype, baseClass.prototype)
+    Object.setPrototypeOf(subClass, baseClass)
   }
 
   /** line, column both 1-based (matching unix tradition). */
@@ -298,8 +310,9 @@
     this.line = line
     this.column = column
     POSITION.call(this, 'no fixed pos')
+
     this.pos = (() => {
-      const { from, text } = this.cmView.state.doc.line(line)
+      const { from, text } = cmView.state.doc.line(line)
       // CodeMirror counts lines from 1 but columns from 0.
       // TODO: `from + findColumn(text, column - 1)` would account for Tab characters,
       //   using "visual" columns that make more sense with Tab/Space indentation.
@@ -307,9 +320,22 @@
       return from + column - 1
     }).bind(this)
   }
-  // subclass POSITION
-  LINE_COLUMN.prototype.__proto__ = POSITION.prototype
-  LINE_COLUMN.__proto__ = POSITION
+  classExtendsBase(LINE_COLUMN, POSITION)
+
+  function LINE_START(of = CURSOR()) {
+    if (!(this instanceof LINE_START)) {
+      return new LINE_START(of)
+    }
+    this.of = of
+    POSITION.call(this, 'no fixed pos')
+
+    this.pos = (() => {
+      const { number } = cmView.state.doc.lineAt(this.of.pos())
+      console.warn(number, this.of, this.of.pos())
+      return LINE_COLUMN(number, 1).pos()
+    }).bind(this)
+  }
+  classExtendsBase(LINE_START, POSITION)
 
   var CALLER = (level = 1) => {
     try { throw Error() }
@@ -328,16 +354,19 @@
     this.pos = () =>
       cmView.state.selection.main.head
   }
-  CURSOR.prototype.__proto__ = POSITION.prototype
-  CURSOR.__proto__ = POSITION
+  classExtendsBase(CURSOR, POSITION)
 
   window.POSITION = POSITION
   window.LINE_COLUMN = LINE_COLUMN
+  window.LINE_START = LINE_START
   window.CALLER = CALLER
+  window.HERE = () => CALLER(0)
   window.CURSOR = CURSOR
 
   // convenience shorthand
   window.WRITE = (text) => CURSOR().WRITE(text)
+
+  // --- Editor component ---
 
   var Editor = ({ code, setCode, className }) => {
     const onUpdate = (update) => {
@@ -376,6 +405,7 @@
     return html`<div className=${className} ref=${editor} />`
   }
 
+  // --- Components for displaying eval results ---
   var Inspect = ({ obj }) => {
     const ref = useRef(null)
     useEffect(() => {

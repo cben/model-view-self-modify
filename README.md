@@ -20,7 +20,10 @@ Like "[event sourcing](https://martinfowler.com/eaaDev/EventSourcing.html)", hav
 Now what if we represent the same user intent as code, not data, and actually append them into relevant place in app code?!
 
 https://model-view-self-modify.netlify.app/?load=counter.js :
-<iframe src="index.html?load=counter.js" width=1600 height=300></iframe>
+<iframe src="index.html?load=counter.js" width=1600 height=400></iframe>
+
+1. Try clicking [increment] [decrement].
+2. Click [Add counter], observe how now each one can be inc/decremented separately.
 
 🖉🗃  To edit your own code(s) and persist after reload, open [without `?load=` param](https://model-view-self-modify.netlify.app/?id=you_pick_whatever); each `?id=...` you pick is independent.
 
@@ -160,11 +163,11 @@ However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](
 
    - [ ] TODO BUG: if you see `cmView is not defined`, edit the left side in any way
 
-   <iframe src="index.html?load=tetris.js" width=1600 height=600></iframe>
+   <iframe src="index.html?load=tetris.js" width=1600 height=700></iframe>
 
-2. Start moving "TIME TRAVEL" line up.
-3. Put editor cursor before it and start clicking [left] [right] [down] buttons to play from that moment.
-4. Put cursor inside `RCSet([...])` in `newGame.board`.  Start clicking board cells to mark them occupied.
+2. Scroll both sides to bottom to see tetris game. Click source line opening "TIME TRAVEL" comment and try moving it up and down.
+3. Click [rotateR] [left] [right] [down] buttons to play from that moment.
+4. Put cursor inside `RCSet([...])` in `newGame` function.  Start clicking board cells to mark them occupied.
 
 🖉🗃  If you want to edit freely, drop the `?load=...` from URL, otherwise your edits get overwritten on reload.
 You can append different `?id=...` to keep separate projects in browser localStorage.
@@ -188,10 +191,6 @@ Can they later learn saner but more complex practices?  Or would it leave them "
 * look for max opportunities to use WRITE() during coding - "moldable development"
   - "level editor" kind of stuff
   - color picker
-
-* It's fragile to place editor cursor correctly before interaction.  Add a way to target a fixed place in code.
-  - MVP: `BEFORE_COMMENT('FOO').WRITE(...)` targetting `//FOO` or `/*FOO*/`?  
-    (It's important to avoid target the code itself that mentions the target name :-)
 
 * go meta: Shift parts of the live env e.g. <DisplayResult> into the env itself so they can be edited?
   - serialize CodeMirror edit actions to a text stream, allow time travel there too?!

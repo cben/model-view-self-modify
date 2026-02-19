@@ -1,12 +1,21 @@
-const model = 0
-  + 1 + 1
-// PUT CURSOR ABOVE BEFORE CLICKING "increment" / "decrement".
-// If you mess up, use Ctrl+Z / Ctrl+Shift+Z.
+var model = 0
+  + 1
+  + 1
+var here = LINE_START(HERE())
 
-const View = (model) => html`<div>
+const View = (model, where) => html`<div>
     <h1>${model}</h1>
-    <button onclick=${() => WRITE(' + 1')}>increment</button>
-    <button onclick=${() => WRITE(' - 1')}>decrement</button>
+    <button onclick=${() => where.WRITE('  + 1\n')}>increment</button>
+    <button onclick=${() => where.WRITE('  - 1\n')}>decrement</button>
   </div>`
+yield View(model, here)
 
-yield View(model)
+var instancesHere = LINE_START(HERE())
+
+const newInstance = `\
+var model = 0
+var here = LINE_START(HERE())
+yield View(model, here)
+
+`
+return html`<button onClick=${() => instancesHere.WRITE(newInstance)}>Add counter</button>`

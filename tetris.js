@@ -164,7 +164,7 @@ var newGame = (seed='foo') => ({
   rng: new Rand(seed),
 })
 
-var View = (model) => {
+var View = ({ model, where }) => {
   const { shape, board, score } = model;
   const merged = unionRC(board, shape[0])
   return html`<div>
@@ -179,10 +179,15 @@ var View = (model) => {
       opacity: ${isLineFull(merged, parseRC(rc)[0]) ? 0.4 : 1.0};
       `
     }/>
-    <button disabled=${!rotateRight || rotateRight(model).lastMoveInvalid} onclick=${() => WRITE('\nmodel = rotateRight(model)')}>rotateR</button>
-    <button disabled=${!left || left(model).lastMoveInvalid} onClick=${() => WRITE('\nmodel = left(model)')}>left</button>
-    <button disabled=${!right || right(model).lastMoveInvalid} onClick=${() => WRITE('\nmodel = right(model)')}>right</button>
-    <button disabled=${!down || down(model).lastMoveInvalid} onClick=${() => WRITE('\nmodel = down(model)')}>down</button>
+    <a href="#" onClick=${where.JUMP}>👈 History</a>
+    <button disabled=${!rotateRight || rotateRight(model).lastMoveInvalid}
+            onclick=${() => where.WRITE('model = rotateRight(model)\n')}>rotateR</button>
+    <button disabled=${!left || left(model).lastMoveInvalid}
+            onClick=${() => where.WRITE('model = left(model)\n')}>left</button>
+    <button disabled=${!right || right(model).lastMoveInvalid}
+            onClick=${() => where.WRITE('model = right(model)\n')}>right</button>
+    <button disabled=${!down || down(model).lastMoveInvalid}
+            onClick=${() => where.WRITE('model = down(model)\n')}>down</button>
   </div>`
 }
 // yield View(newGame())
@@ -283,6 +288,7 @@ var rotateRight = model => {
 // GAME HISTORY
 
 model = newGame()
+
 model = right(model)
 model = right(model)
 model = right(model)
@@ -316,17 +322,17 @@ model = down(model)
 model = down(model)
 model = down(model)
 model = down(model)
-/* -- TIME TRAVEL: use Alt+Up / Alt+Down to move this line ---
+here = LINE_START(HERE()) /* -- TIME TRAVEL: use Alt+Up / Alt+Down to move this line ---
 model = down(model)
 */
+yield model  // because you can!  for debugging
 
 // Any of these forms should render:
+return View({ model, where: here })  // 👈 best stacktraces
 
-// return View(model)
+// return () => View({ model, where: here })
 
-return () => View(model)
+// return html`<${View} model=${model} where=${here}/>`
 
-// return html`<${View} ...${model}/>`
-
-class App extends Component { render = () => View(model) }
+// class App extends Component { render = () => View({ model, where: here }) }
 // return App
