@@ -214,6 +214,9 @@ var completeLines = (model) => {
   }
 }
 
+// KLUDGE: This has side effect on `rng`!  The dogmatic functional approach is I guess
+//   for random generator state to be immutable and return a new state?
+//   But then we'd have to thread it in and *out* of all calls and I don't care enough.
 var randomChoice = (rng, values) =>
   values[Math.floor(rng.next() * values.length)]
 
@@ -224,6 +227,7 @@ yield _.range(10).map(i => randomChoice(r, ['a', 'b', 'c']))
 var lockInPlace = (model) => {
   const { shape, board, score, rng } = model
   return completeLines({
+    ...model,
     score: score + 1,
     board: unionRC(shape[0], board),
     shape: randomChoice(rng, Object.values(shapes)),
@@ -234,7 +238,7 @@ var lockInPlace = (model) => {
 var invalidMove = model =>
   ({ ...model, lastMoveInvalid: true })
 
-var move = (deltaRow, deltaCol, onCollision) => (model) => {
+var move = (deltaRow, deltaCol, onBoundary) => (model) => {
   const { shape, board, score } = model
   // Shift all rotations together; only newPos[0] orientation has to fit board.
   const newShape = shape.map(cells =>
@@ -244,7 +248,7 @@ var move = (deltaRow, deltaCol, onCollision) => (model) => {
 
   if (intersectionRC(newPos, board).size > 0 ||
       intersectionRC(newPos, floor).size > 0) {
-    return onCollision(model)
+    return onBoundary(model)
   }
   if (intersectionRC(newPos, fullBoard).size < newPos.size) {
     return invalidMove(model)
