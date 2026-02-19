@@ -266,8 +266,7 @@ var down = move(+1, 0, lockInPlace)
 
 var rotateRight = model => {
   const { shape, board } = model
-  const newShape = shape.slice(1, 4) + shape.slice(0, 1)
-  console.log(newShape)
+  const newShape = [...model.shape.slice(1, 4), model.shape[0]]
   // TODO: try other "wall kick" positions
   const newPos = newShape[0]
   if (intersectionRC(newPos, board).size == 0 &&
