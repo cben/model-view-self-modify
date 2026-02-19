@@ -166,7 +166,7 @@ var newGame = (seed='foo') => ({
 
 var View = (model) => {
   const { shape, board, score } = model;
-  const merged = unionRC(board, shape)
+  const merged = unionRC(board, shape[0])
   return html`<div>
     <div>Score: ${score}</div>
     <${Board} h=${H+1} rcToStyleFunc=${rc =>
@@ -280,20 +280,40 @@ var rotateRight = model => {
 // GAME HISTORY
 
 model = newGame()
+model = right(model)
+model = right(model)
+model = right(model)
+model = right(model)
+model = down(model)
 model = down(model)
 model = rotateRight(model)
+model = rotateRight(model)
+model = right(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = right(model)
+model = down(model)
+model = rotateRight(model)
+model = rotateRight(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
+model = down(model)
 model = down(model)
 /* -- TIME TRAVEL: use Alt+Up / Alt+Down to move this line ---
-model = left(model)
-model = left(model)
-model = left(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
 model = down(model)
 */
 
