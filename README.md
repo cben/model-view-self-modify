@@ -42,9 +42,9 @@ Prior Art: colorForth [magenta variables](http://www.euroforth.org/ef03/oakford0
 
 Typst aspires to be a better TeX, designed for fast incremental rendering.  Typst creators used appending to make "interactive" games [icicle](https://typst.app/universe/package/icicle/) & [badformer](https://typst.app/universe/package/badformer/), where user types a sequence of WASD letters & document is re-rendered each time.  Also picked up in community [soviet-matrix package](https://github.com/YouXam/soviet-matrix) implementating Tetris.
 
-The core idea is so simple that I'm sure more people independently discovered it before, but I'm not aware of an agreed upon term; I hope "Model View Self-Modify" name might stick by comparison to well-understood MVU?
+I consider PhotoShop layers to be a grand success in showing the public they can be more productive manipulating a *recipe* than directly manipulating the final result.  I've used several EDA software translating menu actions to statements in a Tcl console.  Replayable Dockerfiles brought reproducibility to many more devs.  I want more of these!
 
-@@ I consider PhotoShop layers to be a grand success in showing the public they can be more productive manipulating a *recipe* than directly manipulating the final result.  I've used several EDA software translating menu actions to statements in a Tcl console.  Replayable Dockerfiles brought reproducibility to many more devs.  I want more of these!
+The core idea is so simple that I'm sure more people independently discovered it before, but I'm not aware of an agreed-upon term; I hope "Model View Self-Modify" name might stick by comparison to well-understood MVU?
 
 ## Why (persistence): User's work deserves being 1st-class
 
@@ -131,8 +131,6 @@ which adds ceremony & cognitive load.
 The architecture I propose here is an "internal DSL" alternative.
 Supported actions are written as regular Model → Model functions; you chain them using regular function call syntax.
 
-@@ The natural risk is user work getting locked in code+data "images", like in SmallTalk, it being harder to transplant the data to newer code versions.
-
 Prior Art: VisiCalc's original save format was [a series of keystrokes](https://rmf.vc/ImplementingVisiCalc#:~:text=We%20saved%20the%20spreadsheet%20in%20a%20format%20that%20allowed%20us%20to%20use%20the%20keyboard%20input%20processor%20to%20read%20the%20file%2E) replaying which would re-create the spreadsheet.  That's more of an internal hack, [less suitable](https://www.gnu.org/software/emacs/emacs-paper.html#SEC11) as a stable language, and they did later introduce an [interchange format](https://archive.org/details/bitsavers_visicorpDISpecification1981_745801/).  
 Converting user input to source code with descriptive function names is a step better.  Long-term interchange is still tied to the host language and still depends on whether you can keep a stable "API".
 
@@ -147,7 +145,7 @@ To support both, I extended the self-modification API with objects that represen
 (At this point I had to admit the architecture is not purely functional.  Yes, *technically* you can lift all mutation out of _language_ semantics into _IDE_ — every change results in running a brand new program.  But the system feel is of passing around handles to effectively mutable state, making their indentity matter.)
 
 Prior art: My attempts to google ideas like "purely functional self-modifying code" led nowhere, what with self-modifying code being shunned even in imperative circles for _being hard to reason about_ :-)  
-@@ However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](https://youtu.be/5rg7xvTJ8SU?t=91)).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel lets user fully edit the spreadsheet you got after invoking macros.
+However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](https://youtu.be/5rg7xvTJ8SU?t=91)).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel lets user fully edit the spreadsheet you got after invoking macros.
 
 # Putting it all together: Tetris
 
@@ -155,7 +153,7 @@ Prior art: My attempts to google ideas like "purely functional self-modifying co
 
    - [ ] TODO BUG: if you see `cmView is not defined`, edit the left side in any way
 
-   <iframe src="index.html?load=tetris.js" width=1600 height=700></iframe>
+   <iframe src="index.html?load=tetris.js" width=1300 height=700></iframe>
 
 2. Scroll both sides to bottom to see tetris game. Click source line opening "TIME TRAVEL" comment and try moving it up and down.
 3. Click [rotateR] [left] [right] [down] buttons to play from that moment.
@@ -164,30 +162,20 @@ Prior art: My attempts to google ideas like "purely functional self-modifying co
 🖉🗃  If you want to edit freely, drop the `?load=...` from URL, otherwise your edits get overwritten on reload.
 You can append different `?id=...` to keep separate projects in browser localStorage.
 
-# @@ Drawbacks. Conclusion: Who is this for?
-
-TBH, I don't know.  
-**Cons:** The null hypothesis remains that self-modifying code is to be minimized not embraced, the ⚠ security worries are real, and without incremental computation performance will decline ...
-
-🤪 Could this be a stepping stone for **beginner** programmers making home-cooked, offline, single-user apps?!  
-**Pros:**  's radically minimalistic: It leverages a mental model they need _anyway_ — how changed code gets re-run — to model user interaction too.  
-It smuggles some "advanced" practices like unidirectional data flow & event sourcing, with minimal ceremony.  
-Most important to me, it'd spread the subversive ideas that code _is_ data _is_ code, that "using" _is_ "programming", that any UI forms a [weak] language, and that tools should be moldable.
-
-Can they later learn saner but more complex practices?  Or would it leave them "mentally mutilated beyond hope of regeneration"? Shrug. Yes my first PC exposure was to BASIC, and it was fun ;-)
-
 ## Challenge: O(n²) slowdown
 
 The longer you interact, the longer the code gets, and UI responsiveness will degrade!  This may be bearable for "turn-based" apps and much worse for real-time games.
 
 I'm hopeful incremental computation can help.  Don't re-run code from start, especially when appending near the end.  Feasibility of accurate dependency analisys depends on the language...
 
-- Perhaps it could be helped by user-provided dataflow structure, e.g. treating functions or notebook cells as separate editors.  Building on the Observablehq runtime, or Marimo could be nice.
+- TODO: Perhaps it could be helped by user-provided dataflow structure, e.g. treating functions or notebook cells as separate editors?  Building on the Observablehq runtime, or Marimo could be nice.  
+  This might also form a middle ground between single append point and arbitrary pointers — only append at end of a function/cell/file?  
+  Some granularity is also interesting for receiving updated software and "opening" your existing data with it...
 
-### Challenge: Multi-player / security
+## Challenge: Multi-player / security
 
 Since both logic & user actions are stored in same text form, it's tempting to sync it by CRDT and gain distributed state _for free_.
 
 I want to try it, but it may well be a dead end.  In particular, the free-form source makes it **impractical to enforce any kinds of permissions**; to interact you need permission to edit, and if you can edit you can cheat.
 
-Even in single-user setting injecting data as code is bug-prone.  My current `WRITE('string')` helper is risky, should add safe parametrization like in good DB query-building APIs.
+Even in single-user setting injecting data as code is bug-prone.  TODO: My current `WRITE('string')` helper is risky, should add safe parametrization like in good DB query-building APIs.
