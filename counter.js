@@ -18,4 +18,4 @@ var here = LINE_START(HERE())
 yield View(model, here)
 
 `
-return html`<button onClick=${() => instancesHere.WRITE(newInstance)}>Add counter</button>`
+return html`<button onClick=${() => instancesHere.WRITE(newInstance)}>Create counter</button>`

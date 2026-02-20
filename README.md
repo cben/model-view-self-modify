@@ -1,80 +1,90 @@
 > This README is better viewed [online](https://model-view-self-modify.netlify.app/README.html) with interactive iframes, than on [github](https://github.com/cben/model-view-self-modify).
 >
-> You can also `git clone https://github.com/cben/model-view-self-modify` and serve locally by e.g. `python3 -m http.server` but current implementation won't load offline (I used CDNs).
+> You can also `git clone https://github.com/cben/model-view-self-modify` and serve locally by e.g. `python3 -m http.server` though current implementation won't load offline (I used CDNs).
 
 # what: Model |> View |> Self-Modify architecture
 
-An approach to interactive apps/games I'd wanted to try in a toy language but realized is largely language-agnostic. I made a JS proof-of-concept of it.
-
-To explain it, first recall **"Model-View-Update"** architecture popularized by [Elm](https://elmprogramming.com/model-view-update-part-1.html) / [Redux](https://redux.js.org/tutorials/fundamentals/part-2-concepts-data-flow):  
-app state is immutable ("Model" / "store"), View renders UI as a pure function of state,  
-user actions are [defunctionalize][]d into pure data e.g. `{ type: "rotateRight" }`,  
-and "Update" / "reducer" function dispatches on (action, old model) → to compute new model.
-
-Like "[event sourcing](https://martinfowler.com/eaaDev/EventSourcing.html)", having the actions log enables fun tooling. Notably "live reload" simulated by replaying actions from scratch on new code, and [time traveling debugging](https://elm-lang.org/news/time-travel-made-easy).
-
-[defunctionalize]: https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
-
-### What I built: a live coding JS environment, where _user actions call `WRITE(...)` to modify app source_:
-
-Now what if we represent the same user intent as code, not data, and actually append them into relevant place in app code?!
+Representing user actions as source code modification is an under-explored approach to state management. I built a JS live coding environment to play with it. Here is a minimal example:
 
 https://model-view-self-modify.netlify.app/?load=counter.js :
 <iframe src="index.html?load=counter.js" width=1600 height=400></iframe>
 
-1. Try clicking [increment] [decrement].
-2. Click [Add counter], observe how now each one can be inc/decremented separately.
+1. Try clicking [increment] [decrement].  User actions `WRITE(...)` computation steps into the source, which is immediately re-run and UI is updated.
+   (I'm using UPPERCASE names for source-handling helpers)
+2. Click [Create counter], observe how now each counter can be inc/decremented separately.
 
 🖉🗃  To edit your own code(s) and persist after reload, open [without `?load=` param](https://model-view-self-modify.netlify.app/?id=you_pick_whatever); each `?id=...` you pick is independent.
 
-This is a questionable idea in many ways (⚠ including security!) but it challenges assumptions on essential complexity and walls between language/env authors | developer | end-user.
+I'm excited about it for 2 reasons:
+1. Cognitive simplicity: It requires grokking only one concept of change for code & data evolution, and it doesn't force one above the other.
+2. By implementing ["Always Already Programming"](https://gist.github.com/melaniehoff/95ca90df7ca47761dc3d3d58fead22d4) literally, it is conductive to [blurring the boundaries](https://joshuahhh.com/paper-plateau-2026-blurry/) between language/env authors | developer | end-user.
+
+There are obvious concerns including ⚠security, scalability, and software updates.  Yet if you want to build malleable, bi-directional, home-cooked, end-user-empowering experiences, I propose this is a fruitful starting point.
+
+### Focus: "Append-mostly" over in-place overwriting
+
+A counter could also be implemented by over-writing `var model = 0` to become `= 1`, `= 2` and so on.  Both are interesting and under-explored!  I choose to focus on appoarches that append "transcript(s)" of computation steps corresponding to user actions, because:
+
+- Non-destructive, easier to clean up after shooting yourself in the foot.
+- Capturing your actions in text is a gateway to programming [by demonstration].
+- It smuggles advanced-but-somewhat-mainstream practices like MVU/redux and [event sourcing](https://martinfowler.com/eaaDev/EventSourcing.html) into "muggle" hands 😈. It enables fun workflows notably live reload and [time traveling debugging](https://elm-lang.org/news/time-travel-made-easy).
+
+Compare to **"Model-View-Update" architecture** popularized by [Elm](https://elmprogramming.com/model-view-update-part-1.html) / [Redux](https://redux.js.org/tutorials/fundamentals/part-2-concepts-data-flow):  
+app state is immutable ("Model" / "store"), View renders UI as a pure function of state,  
+user actions are [defunctionalize][]d into pure data e.g. `{ type: "rotateRight" }`,  
+and "Update" / "reducer" function dispatches on (action, old model) → to compute new model.
+
+[defunctionalize]: https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
+
+The difference here is we represent the same user intent as code e.g. `model = rotateRight(model)`, not data, and actually append them in designated  place(s) in app code. (see "Where" section below)  
+Bi-directionality here is not some "magical" output->source inference, you write explicit UI code that generates source pieces. You can encapsulate it in components, not unlike React+Redux.
+
+Prior Art: colorForth [magenta variables](http://www.euroforth.org/ef03/oakford03.pdf) are over-writable pointers into code. [James Vaughan](https://jamesbvaughan.com/bidirectional-editing/) and [Jason McGhee](https://news.ycombinator.com/item?id=44437770) shared several projects that overwrite, which are also interesting for using Language Server Protocol to de-couple execution from a specific editor.  
+
+Typst aspires to be a better TeX, designed for fast incremental rendering.  Typst creators used appending to make "interactive" games [icicle](https://typst.app/universe/package/icicle/) & [badformer](https://typst.app/universe/package/badformer/), where user types a sequence of WASD letters & document is re-rendered each time.  Also picked up in community [soviet-matrix package](https://github.com/YouXam/soviet-matrix) implementating Tetris.
+
+The core idea is so simple that I'm sure more people independently discovered it before, but I'm not aware of an agreed upon term; I hope "Model View Self-Modify" name might stick by comparison to well-understood MVU?
+
+@@ I consider PhotoShop layers to be a grand success in showing the public they can be more productive manipulating a *recipe* than directly manipulating the final result.  I've used several EDA software translating menu actions to statements in a Tcl console.  Replayable Dockerfiles brought reproducibility to many more devs.  I want more of these!
 
 ## Why (persistence): User's work deserves being 1st-class
 
-Traditional developer (especially one attempting event sourcing / time travel / record-replay live coding)
-needs two concepts of stateful change: changing state inside the app, but also changing the app source.
-
-```mermaid
-graph LR
-  code --> runtime --> developer ==> code
-  subgraph runtime
-     state --> view --> action ==> state
-  end
-```
-
-Our languages encourage us to store user's work in built-in data structures (lists, dicts etc.)
+Our languages encourage us to store user's work in runtime data structures (lists, dicts etc.)
 but when process dies or code changes, we discover developer's work was durable,
 but user's work is lost — and we need a whole other toolbag (file I/O, serialization, pointer swizzling, networked storage APIs, databases, ORMs...) to tackle that 🤕.
 
-This approach reduces both to only one concept, on equal footing.
+![diagram of user data being ephemeral by default, needing extra save/load code](2nd-class-user-work.svg)
+[TODO: redraw building on [Joshue Horowitz's visual language](https://joshuahhh.com/dims-of-feedback/)]
 
-  - Think of an event-sourcing DB migration changing the format of past events,
-    or a refactor changing Redux actions structure, invalidating the recorded history.
-    Fixing those requires thinking of both "change" concepts at once :-/
+That creates perverse incentive against fine-grained mixing of software use & modification/automation.  
+Even as experienced programmer running 100% open source OS, I'd rather keep my exact state as a user than use my superpowers if that means restarting the process!  The contexts where I do mix them, routinely & fearlessly, are: (1) browser devtools to tweak layout/styling — even if those tweaks won't persist (2) shell prompt, where use is always already textual — and code is frequently disposable (yet retrievable from shell history).
 
-    In Redux devtools, you could download the actions log as JSON, process, and load new actions.  
+LISPs, Smalltalk, Self famously put code & user's work on equal footing in a single persistent "image" of data structures.  
+Here I'm unifying in the other direction, storing both as textual code - this direction is _under-explored_!  
+Cf. also [Jamie Brandon on runtime state vs. legibility tradeoffs](https://www.scattered-thoughts.net/writing/there-are-no-strings-on-me/).
+
+### Schema evolution NOT solved, but cognitively flattened
+
+[Cambria](https://www.inkandswitch.com/cambria/) and [Subtext](https://www.subtext-lang.org/) attack a hard problem:
+
+> For example, many live programming techniques treat state as ephemeral and recreate it after every edit, but when the shape of longer-lived state changes then the illusion of liveness is shattered – hot reloading works until it doesn’t. — https://arxiv.org/pdf/2412.06269
+
+Consider event-sourcing DB migration changing the format of past events, or a refactor changing Redux actions structure, invalidating the recorded history. Fixing those requires thinking of both "code change" and "action on data" concepts at once :-/
+In Redux devtools, you could download the actions log as JSON, process, and load new actions.  
     It's tedious and in my dev experience I used to just discard the log.
     
     In this self-modify paradigm you get same issues — but _history is regular code_,
     so regular "debug / refactor after an API change" skills apply!  
     (Including the option of keeping API compatibility)
 
-This does NOT magically solve the hard problems of schema evolution, which [Cambria](https://www.inkandswitch.com/cambria/) and [Subtext](https://www.subtext-lang.org/) are trying to attack:
-
-> For example, many live programming techniques treat state as ephemeral and recreate it after every edit, but when the shape of longer-lived state changes then the illusion of liveness is shattered – hot reloading works until it doesn’t. — https://arxiv.org/pdf/2412.06269
+This does NOT magically solve the hard problems of schema evolution, which 
 
 I punt on that hard problem and expect user=dev resolve conflicts, just in a conceptually simple way.
-
-Prior art: LISPs, Smalltalk, Self famously unified code & user's work in a single persistent "image" of data structures.  
-Here I'm unifying in the other direction, storing both as textual code - this direction is _under-explored_!  
-Cf. also [Jamie Brandon's on runtime state vs. legibility tradeoffs](https://www.scattered-thoughts.net/writing/there-are-no-strings-on-me/).
-
-- TODO: Why I focus on appending actions instead of replacing state in-place?
 
 ## Why: Reduce barriers between app "end user" / developer
 
 First, note the live environment responsible for re-evaluating code upon every change and rendering the result is no longer a "dev tool" — it's now essential part of the app **runtime**.  
-(Distributing dev env to ALL users may feel weird in compiler circles, but is 100% normal in Excel circles.)
+(Distributing dev env to ALL users may feel weird in compiler circles, but is 100% normal in Excel circles.  @@ Actually Excel+macros is relevant )
 
 The source could be hidden by default, but it does give user some powers!  First, undo/redo for free.
 
@@ -129,33 +139,23 @@ which adds ceremony & cognitive load.
 The architecture I propose here is an "internal DSL" alternative.
 Supported actions are written as regular Model → Model functions; you chain them using regular function call syntax.
 
-## Why (purity): Lift mutation out of _language_ into _IDE_?
+The natural risk is user work getting locked in code+data "images", like in SmallTalk, it being harder to transplant the data to newer code versions.
 
-1. 199x Browsers popularized what user sees being a pure function of DOM.
-2. 201x React popularized DOM being pure function of your data/state ("model").
-3. Given a live coding environment where the code you edit gets _re-evaluated on every edit_,  
-   we could move _all_ mutation out of the language!?
+Prior Art: VisiCalc's original save format was [a series of keystrokes](https://rmf.vc/ImplementingVisiCalc#:~:text=We%20saved%20the%20spreadsheet%20in%20a%20format%20that%20allowed%20us%20to%20use%20the%20keyboard%20input%20processor%20to%20read%20the%20file%2E) replaying which would re-create the spreadsheet.  That's more of an internal hack, [less suitable](https://www.gnu.org/software/emacs/emacs-paper.html#SEC11) as a stable language, and they did later introduce an [interchange format](https://archive.org/details/bitsavers_visicorpDISpecification1981_745801/).  
+Converting user input to source code with descriptive function names is a step better.  Long-term interchange is still tied to the host language and still depends on whether you can keep a stable "API".
 
-```mermaid
-graph LR
-  code[[source code]] -->|re-run| state
-  p(programmer affects) --> code
-  subgraph language semantics
-    state[(state)] -->|React| DOM
-  end
-  DOM -->|browsers| screen --> u
-  u(user affects) -..-x|MVU| state
-  u -->|💡| code
-```
+## Where: One vs. Multiple writable pointers into source
 
-- However, I'm now experimenting with having "pointers" into source code locations.  Redux is weird in using messages without a "receiver"; e.g. if you want to model 2 concurrent games, you have to change your messages to include "which game" field — not modular like OOP.  Here, it'd be saner to say "New game" button appends a new function, and actions in each game append changes to that function.
+Purely functional MVU gravitates towards all actions forming a single history.  Redux effectively does message-passing without a "receiver", with some benefits — and some modularity costs — compared to OOP.
 
-  Well, once you're passing around your code objects that represent different place where you can mutate source code, is that really meaningful to claim the mutation happens outside the language semantics?  No.
+But for me the overriding goal is *produced code should fit the user's mental model*!  For example, if user is making moves in 2 games concurrently, do they want a single interleaved transcript ("Knight f3 on board 2"), or separate transcript of each game?  Do they want global time-travel/undo, or separate for each game?  (If separate, there is still editor's global Ctrl+Z.)
 
-  => A more useful perspective is not formal "purity" but pragmatic [Functional Core, Imperative Shell](https://www.destroyallsoftware.com/screencasts/catalog/functional-core-imperative-shell).
+To support both, I extended the self-modification API with objects that represent locations in source code (`CURSOR()`, `CALLER()`, `LINE_START(HERE())` etc.), each supporting editor actions (which currently consist of `.WRITE(text)` and `.JUMP()`).  That's how the first example manages multiple counters!
+
+(At this point I had to admit the architecture is not purely functional.  Yes, *technically* you can lift all mutation out of _language_ semantics into _IDE_ — every change results in running a brand new program.  But the system feel is of passing around handles to effectively mutable state, making their indentity matter.)
 
 Prior art: My attempts to google ideas like "purely functional self-modifying code" led nowhere, what with self-modifying code being shunned even in imperative circles for _being hard to reason about_ :-)  
-However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](https://youtu.be/5rg7xvTJ8SU?t=91)).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel lets user fully edit the spreadsheet you got after invoking macros.
+@@ However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](https://youtu.be/5rg7xvTJ8SU?t=91)).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel lets user fully edit the spreadsheet you got after invoking macros.
 
 # Putting it all together: Tetris
 
@@ -172,7 +172,7 @@ However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](
 🖉🗃  If you want to edit freely, drop the `?load=...` from URL, otherwise your edits get overwritten on reload.
 You can append different `?id=...` to keep separate projects in browser localStorage.
 
-# Conclusion: Who is this for?
+# @@ Drawbacks. Conclusion: Who is this for?
 
 TBH, I don't know.  
 **Cons:** The null hypothesis remains that self-modifying code is to be minimized not embraced, the ⚠ security worries are real, and without incremental computation performance will decline O(n²)...
@@ -224,13 +224,3 @@ Is this really language agnostic?  Kinda, but some language affordances may help
   Specifically, parametrizing inserted code should use safe templating rather than string interpolation to reduce risks of injection.
 - immutable semantics conductive to incremental re-computation.
 
-# More prior art
-
-The core idea is so simple that I'm sure many people independently discovered it before, but I'm not aware of an agreed upon term to search...
-
-Perhaps my main contribution will be "Model View Self-Modify" name, and the explanation by comparison to now widely understood MVU architecture.
-
-- Typst aspires to be a better TeX, designed for fast incremental rendering.  Typst creators used a very similar approach to make "interactive" games [icicle](https://typst.app/universe/package/icicle/) & [badformer](https://typst.app/universe/package/badformer/), where user types a sequence of WASD letters & documented is re-rendered each time.  Also picked up in community [soviet-matrix package](https://github.com/YouXam/soviet-matrix) implementating Tetris.
-
-- https://jamesbvaughan.com/bidirectional-editing/ prototypes a widget wired to edit source code over LSP.  Excellent idea to decouple behavior of mutable code from choice of editor!
-  - Jason McGhee shared several [related projects](https://news.ycombinator.com/item?id=44437770).
