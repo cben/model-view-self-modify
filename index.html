@@ -280,8 +280,12 @@
       if (text) {
         cmView.dispatch({
           changes: { from: pos, insert: text.toString() },
-          // move cursor after inserted text.
-          selection: { anchor: pos + text.toString().length },
+          // DO NOT move cursor (nor scroll) after inserted text.
+          //   If any source edits are scheduled asyncrhonously e.g. on a timer,
+          //   stealing the cursor results in user losing ability to edit manually.
+          // TODO: find another way for awareness of off-screen edits.
+          // TOOD: separate undo of user vs. automated edits??
+          // selection: { anchor: pos + text.toString().length },
         })
       }
     }).bind(this)
