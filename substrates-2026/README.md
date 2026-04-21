@@ -1,19 +1,24 @@
-> This is version [to be] presented at [Substrates 2026](https://2026.programming-conference.org/home/substrates-2026#program) workshop.
+> This is version I presented at [Substrates 2026](https://2026.programming-conference.org/home/substrates-2026#program) workshop, plus some updates per reviewer feedback.
 >
-> It is better viewed online (https://model-view-self-modify.netlify.app/substrates-2026.html) with interactive iframes, than on [github](https://github.com/cben/model-view-self-modify/blob/main/substrates-2026.md).  
-> You can also `git clone https://github.com/cben/model-view-self-modify` and serve locally by e.g. `python3 -m http.server` though current implementation won't load offline (I used CDNs).
+> It is better viewed with interactive iframes, online (https://cben.github.io/model-view-self-modify/substrates-2026.html) or locally:
+> ```
+> git clone https://github.com/cben/model-view-self-modify
+> cd model-view-self-modify
+> git checkout substrates-2026
+> python3 -m http.server  # or any other static server
+> ```
 
 # what: Model |> View |> Self-Modify architecture
 
-Representing user actions as source code modification is an under-explored approach to state management. I built a JS live coding environment to play with it. Here is a minimal example (https://model-view-self-modify.netlify.app/?load=counter.js):
+Representing user actions as source code modification is an under-explored approach to state management. I built a JS live coding environment to play with it. Here is a minimal example (https://cben.github.io/model-view-self-modify/substrates-2026/editor.html?load=counter.js):
 
-<iframe src="index.html?load=counter.js" width=1400 height=450></iframe>
+<iframe src="substrates-2026/editor.html?load=counter.js" width=1400 height=450></iframe>
 
 1. Try clicking [increment] [decrement].  User actions `WRITE(...)` computation steps into the source, which is immediately re-run and UI is updated.
    (I'm using UPPERCASE names for source-handling helpers)
 2. Click [Create counter], observe how now each counter can be inc/decremented separately.
 
-🖉🗃  To edit your own code(s) and persist after reload, open [without `?load=` param](https://model-view-self-modify.netlify.app/?id=you_pick_whatever); each `?id=...` you pick is independent.
+🖉🗃  To edit your own code(s) and persist after reload, open [without `?load=` param](https://model-view-self-modify.netilify.app/?id=you_pick_whatever); each `?id=...` you pick is independent.
 
 I'm excited about it for 2 reasons:
 1. Cognitive simplicity: It requires grokking only one concept of change for code & data evolution, and it doesn't force one above the other.
@@ -94,7 +99,7 @@ Prior Art: Graphite.rs image editor has [language-centric architecture](https://
 If user-facing UI actually edits/inserts code, same skills translate to developer making mini-UIs for themself!  
 
 - TDD helpers: visualize pass/fail/rich results, buttons to `JUMP()` to test's code:
-  https://model-view-self-modify.netlify.app/?load=test-helpers.js
+  https://cben.github.io/model-view-self-modify/substrates-2026/editor.html?load=test-helpers.js
 
 - _Help yourself_ to [Babylonian-style Programming](https://arxiv.org/abs/1902.00549) without hard-wired IDE support?  Call a function, render the results.  Write examples as part of the language, not special metadata.
 
@@ -150,11 +155,11 @@ However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](
 
 # Putting it all together: Tetris
 
-1. https://model-view-self-modify.netlify.app/?load=tetris.js
+1. https://cben.github.io/model-view-self-modify/substrates-2026/editor.html?load=tetris.js
 
    - [ ] TODO BUG: if you see `cmView is not defined`, edit the left side in any way
 
-   <iframe src="index.html?load=tetris.js" width=1300 height=700></iframe>
+   <iframe src="substrates-2026/editor.html?load=tetris.js" width=1300 height=700></iframe>
 
 2. Scroll both sides to bottom to see tetris game. Click source line opening "TIME TRAVEL" comment and try moving it up and down.
 3. Click [rotateR] [left] [right] [down] buttons to play from that moment.
@@ -180,3 +185,5 @@ Since both logic & user actions are stored in same text form, it's tempting to s
 I want to try it, but it may well be a dead end.  In particular, the free-form source makes it **impractical to enforce any kinds of permissions**; to interact you need permission to edit, and if you can edit you can cheat.
 
 Even in single-user setting injecting data as code is bug-prone.  TODO: My current `WRITE('string')` helper is risky, should add safe parametrization like in good DB query-building APIs.
+
+## Bibliography

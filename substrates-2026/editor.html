@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<style>
+  .cm-editor {
+    border: inset 1px;
+    height: 80vh;
+    max-width: 50vw;
+  }
+
+  *:focus,
+  .cm-editor.cm-focused {
+    outline: 2px dashed purple;
+  }
+
+  .cm-editor:not(.cm-focused) .cm-cursor {
+    display: block !important;
+    opacity: 60%;
+  }
+
+  .results {
+    height: 100vh;
+    width: 100%;
+    overflow: scroll;
+  }
+
+  .result th {
+    text-align: start;
+  }
+
+  .result-presentation div {
+    width: max-content;
+    max-height: 70vh;
+    overflow: auto;
+  }
+
+  kbd {
+    outline: outset 1px;
+    border-radius: 3px;
+  }
+
+  f*[accesskey]:after {
+    content: " (" attr(accesskey) ")";
+  }
+</style>
+
+<link rel="stylesheet" href="https://unpkg.com/@observablehq/inspector/dist/inspector.css" />
+
+<script type="importmap">
+  {
+    "imports": {
+      "@codemirror/basic-setup": "https://unpkg.com/@codemirror/basic-setup/dist/index.js",
+      "@codemirror/autocomplete": "https://unpkg.com/@codemirror/autocomplete/dist/index.js",
+      "@codemirror/commands": "https://unpkg.com/@codemirror/commands/dist/index.js",
+      "@codemirror/language": "https://unpkg.com/@codemirror/language/dist/index.js",
+      "@codemirror/lang-javascript": "https://unpkg.com/@codemirror/lang-javascript/dist/index.js",
+      "@codemirror/lint": "https://unpkg.com/@codemirror/lint/dist/index.js",
+      "@codemirror/search": "https://unpkg.com/@codemirror/search/dist/index.js",
+      "@codemirror/state": "https://unpkg.com/@codemirror/state/dist/index.js",
+      "@codemirror/view": "https://unpkg.com/@codemirror/view/dist/index.js",
+      "@lezer/common": "https://unpkg.com/@lezer/common/dist/index.js",
+      "@lezer/highlight": "https://unpkg.com/@lezer/highlight/dist/index.js",
+      "@lezer/javascript": "https://unpkg.com/@lezer/javascript/dist/index.js",
+      "@lezer/lr": "https://unpkg.com/@lezer/lr/dist/index.js",
+      "@marijn/find-cluster-break": "https://unpkg.com/@marijn/find-cluster-break/src/index.js",
+      "@observablehq/inspector": "https://unpkg.com/@observablehq/inspector?module",
+      "htm": "https://unpkg.com/htm/dist/htm.mjs",
+      "preact": "https://unpkg.com/preact/dist/preact.mjs",
+      "preact/hooks": "https://unpkg.com/preact/hooks/dist/hooks.mjs",
+      "fdrandom": "https://unpkg.com/fdrandom",
+      "rand-seed": "https://unpkg.com/rand-seed/dist/es/index.js",
+      "seeded-rand": "https://unpkg.com/seeded-rand/dist/jsrand.js?module",
+      "style-mod": "https://unpkg.com/style-mod/src/style-mod.js",
+      "w3c-keyname": "https://unpkg.com/w3c-keyname/index.js",
+      "crelt": "https://unpkg.com/crelt/index.js"
+    }
+  }
+</script>
+
+<script type="module">
+  // htm gives us JSX-like notation in standard JS tagged template literals.
+  import htm from 'htm'
+  import { h, render, Component, isValidElement } from 'preact'
+  import { useEffect, useState, useRef } from 'preact/hooks'
+  var html = htm.bind(h)
+
+  import { EditorState, basicSetup } from '@codemirror/basic-setup'
+  import { EditorView, keymap } from '@codemirror/view'
+  import { SearchCursor, RegExpCursor } from "@codemirror/search"
+  import { findColumn } from '@codemirror/state'
+  import { defaultKeymap, indentWithTab } from '@codemirror/commands'
+  import { javascript } from '@codemirror/lang-javascript'
+
+  import { Inspector } from '@observablehq/inspector'
+
+  // -- Imports to be used by user code --
+
+  window.html = html
+  window.Component = Component
+  window.Inspector = Inspector
+  // TODO: this does hashed seeding, no getState/setState.
+  import Rand, { PRNG } from 'rand-seed'
+  window.Rand = Rand
+  // import Srand from 'seeded-rand'
+  // window.Srand = Srand
+  // TODO: https://stackoverflow.com/questions/47978809/how-to-dynamically-execute-eval-javascript-code-that-contains-an-es6-module-re
+  import _ from 'https://unpkg.com/lodash-es'
+  window._ = _
+  window.RegExpCursor = RegExpCursor
+
+  // --- Eval helpers https://stackoverflow.com/a/76452154/239657 ---
+
+  const GeneratorFunction = function* () { }.constructor
+
+  // sourceURL pragma makes stack traces more readable.
+  var sourcePragma = '\n//# sourceURL=evaluated-code'
+
+  // NUMBERING: follow browser stack traces, 1:1-based lines and columns.
+
+  // Firefox reports 1-based `lineNumber`, but also inserts `function anonymous(arg1, arg2` as line 1,
+  // and `) {` as line 2 (see .toString() on successfully parsed functions). Measure instead of guessing!
+  let functionLineOffset = 0
+  // level=0 is call site, level=1 is parent...  Results are 0-based.
+  var lineColumnFromStack = (stack, level) => {
+    // First line is Error type & message (can span more lines if it contains newlines).
+    // Looking for `evaluated-code:` skips that and counts stack frames, and only user's stack frames.
+    const matches = Array.from(stack.matchAll(/evaluated-code:(\d+):(\d+)?/g))
+    const [whole, line, column] = matches[level]
+    return [Number(line) - functionLineOffset, Number(column) - 1]
+  }
+  try {
+    // new GeneratorFunction('!@#$' + sourcePragma)
+    const gen = new GeneratorFunction('throw Error(`foo\nbar\nbaz`)' + sourcePragma)
+    Array.from(gen())
+  } catch (err) {
+    // console.warn(err.lineNumber, lineColumnFromStack(err.stack, 0))
+    // Only good once — later lineColumnFromStack() already corrects for functionLineOffset
+    functionLineOffset = err.lineNumber - 1 || lineColumnFromStack(err.stack, 0)[0] - 1
+  }
+
+  // AFAICT GeneratorFunction syntax is strict superset of Function — can still use regular `return`.
+  // - `code` should contain `yield` and/or `return` statements if you want a result.
+  // - Caller has to repeatedly call `.next()` to collect them.
+  //
+  // Uses essentially same scoping rules as `Function` constructor:
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/Function
+  //  - assignments without `var`/`let`/`const` do write to global namespace.
+  var betterEvalFunction = code => {
+    let parsedFunc
+    try {
+      parsedFunc = new GeneratorFunction(code + sourcePragma)
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        // Goal: find & show responsible line directly in the message
+        const { name, message, lineNumber, columnNumber } = err
+        var lines = code.split('\n')
+
+        // Firefox, non-standard
+        if (lineNumber !== undefined) {
+          const line = lineNumber - functionLineOffset
+          // TODO: linkify line:column
+          throw SyntaxError(
+            `${message} (at ${line}:${columnNumber}):\n` +
+            `${lines[line - 1] || ''}\n` +
+            (columnNumber === undefined ? '' : `${' '.repeat(columnNumber - 1)}^`))
+        }
+
+        // Other browsers leave you in the dark :-(
+        // ESTIMATE where it happened by slicing lines off the end until message disappears/changes
+        // (likely to have unclosed braces etc. — but assuming it reports the first of all errors)
+        var lastLine
+        for (lastLine = lines.length - 1; lastLine > 0; lastLine--) {
+          try {
+            new GeneratorFunction(lines.slice(0, lastLine).join('\n')) // only parse, don't run
+            // console.log('error disappeared')
+            break
+          } catch (err2) {
+            if (err2.message === err.message && err2 instanceof SyntaxError) {
+              continue
+            }
+            // console.log('error changed to:', err2.message)
+            break
+          }
+        }
+        throw SyntaxError(
+          `${err.message} (probably around line ${lastLine + 1}):\n` +
+          (lines[lastLine] || ''))
+      }
+      throw err
+    }
+
+    // Run!
+    // If SyntaxError gets thrown here, leave it alone - above approach would be unsafe,
+    // and it might not even represent JS error (e.g. `htm` throws it for template syntax).
+    return parsedFunc()
+  }
+
+  // --- EditEvalRenderLoop component ---
+
+  var demoCode = 'yield (props) => html`<a href="/">Hello!</a>`\n\n// Add ?id=... to URL to keep separate projects in browser localStorage.'
+
+  var EditEvalRenderLoop = (props) => {
+    const [code, setCode] = useState(props.initialCode)
+
+    const saveCode = (code) => {
+      console.log('saveCode to id:', props.localStorageId)
+      localStorage.setItem(props.localStorageId, code)
+      setCode(code)
+    }
+
+    // If code uses `yield` to return multiple UIs, it's possible for some to succeed but one raise exception.
+    var evalResults = [] // each item is either { result } or { err }
+    try {
+      console.log('Evaluating...')
+      const iterator = betterEvalFunction(code)
+      // for..of would not collect a final `return`, so call `.next()` ourselves.
+      while (true) {
+        const item = iterator.next()
+        evalResults.push({ result: item.value })
+        // Treating final `return` same as last `yield`.  TODO: trailing `undefined` if no return.
+        if (item.done)
+          break
+      }
+    } catch (err2) {
+      evalResults.push({ err: err2 })
+    }
+    // help debugging this display in browser console
+    window.evalResults = evalResults
+
+    // TODO: use https://github.com/observablehq/inspector for rendering values / components?
+
+    return html`
+      <table>
+        <td>
+          <h3>Source code:</h3>
+          <${Editor}
+            code=${code} setCode=${saveCode}
+          />
+          <p>Use <code>yield ...</code> and/or <code>return ...</code> statements.
+             No JSX, instead use <a href="https://github.com/developit/htm" target="blank"><code>${'html`<tag ${...}>`'}</code> notation</a>.
+             To move focus outside editor, press <kbd>Esc</kbd> then <kbd>Tab</kbd>.
+          </p>
+        </td>
+        <td>
+          <div class="results">
+            ${evalResults.map(({ result, err }) =>
+              html`<${ErrorBoundary}
+                key=${code /*force ErrorBoundary reset after edit (TODO: reduce excessive remounts?)*/}
+              >
+                <${DisplayResult}
+                  evalResult=${result}
+                  err=${err}
+                />
+              <//>
+              <hr/>`
+            )}
+          </div>
+        </td>
+      </table>`
+  }
+
+  // --- Code self-modification "anchors" & action methods (WRITE, JUMP) ---
+  // convention: self-modify helpers are UPPERCASE.
+
+  // functions rather than `class` to avoid need for `new`.
+  function POSITION(pos) {
+    if (!(this instanceof POSITION)) {
+      return new POSITION(pos)
+    }
+    // TODO SCOPING KLUDGE: these rely on global `cmView` set inside `Editor`.
+    //   For now preferring `cmView` to `this.cmView` until #8 is solved.
+    this.cmView = window.cmView
+
+    // Override this method in subclasses for late-binding
+    this.pos = () => pos
+
+    // bind methods so e.g. CALLER().WRITE can be passed around...
+    this.WRITE = ((text) => {
+      const pos = this.pos()
+      console.log(this, 'pos() =', pos, 'WRITE', text)
+      if (text) {
+        cmView.dispatch({
+          changes: { from: pos, insert: text.toString() },
+          // DO NOT move cursor (nor scroll) after inserted text.
+          //   If any source edits are scheduled asyncrhonously e.g. on a timer,
+          //   stealing the cursor results in user losing ability to edit manually.
+          // TODO: find another way for awareness of off-screen edits.
+          // TOOD: separate undo of user vs. automated edits??
+          // selection: { anchor: pos + text.toString().length },
+        })
+      }
+    }).bind(this)
+
+    this.JUMP = (() => {
+      const pos = this.pos()
+      console.log(this, 'pos() =', pos, 'JUMP')
+      cmView.dispatch({
+        selection: { head: pos, anchor: pos },
+        scrollIntoView: true,
+      })
+      cmView.focus()
+    }).bind(this)
+  }
+
+  var classExtendsBase = (subClass, baseClass) => {
+    Object.setPrototypeOf(subClass.prototype, baseClass.prototype)
+    Object.setPrototypeOf(subClass, baseClass)
+  }
+
+  /** line, column both 1-based (matching unix tradition). */
+  function LINE_COLUMN(line, column) {
+    if (!(this instanceof LINE_COLUMN)) {
+      return new LINE_COLUMN(line, column)
+    }
+    this.line = line
+    this.column = column
+    POSITION.call(this, 'no fixed pos')
+
+    this.pos = (() => {
+      const { from, text } = cmView.state.doc.line(line)
+      // CodeMirror counts lines from 1 but columns from 0.
+      // TODO: `from + findColumn(text, column - 1)` would account for Tab characters,
+      //   using "visual" columns that make more sense with Tab/Space indentation.
+      //   But it makes pos<->line,column round tripping more fragile, for now counting tab as 1.
+      return from + column - 1
+    }).bind(this)
+  }
+  classExtendsBase(LINE_COLUMN, POSITION)
+
+  function LINE_START(of = CURSOR()) {
+    if (!(this instanceof LINE_START)) {
+      return new LINE_START(of)
+    }
+    this.of = of
+    POSITION.call(this, 'no fixed pos')
+
+    this.pos = (() => {
+      const { number } = cmView.state.doc.lineAt(this.of.pos())
+      console.warn(number, this.of, this.of.pos())
+      return LINE_COLUMN(number, 1).pos()
+    }).bind(this)
+  }
+  classExtendsBase(LINE_START, POSITION)
+
+  var CALLER = (level = 1) => {
+    try { throw Error() }
+    catch (e) {
+      const [line, column] = lineColumnFromStack(e.stack, level)
+      return LINE_COLUMN(line, column)
+    }
+  }
+
+  function CURSOR() {
+    if (!(this instanceof CURSOR)) {
+      return new CURSOR()
+    }
+
+    POSITION.call(this, 'no fixed pos')
+    this.pos = () =>
+      cmView.state.selection.main.head
+  }
+  classExtendsBase(CURSOR, POSITION)
+
+  window.POSITION = POSITION
+  window.LINE_COLUMN = LINE_COLUMN
+  window.LINE_START = LINE_START
+  window.CALLER = CALLER
+  window.HERE = () => CALLER(0)
+  window.CURSOR = CURSOR
+
+  // convenience shorthand
+  window.WRITE = (text) => CURSOR().WRITE(text)
+
+  // --- Editor component ---
+
+  var Editor = ({ code, setCode, className }) => {
+    const onUpdate = (update) => {
+      if (update.docChanged) {
+        // console.log('docChanged', update.state.doc)
+        setCode(update.state.doc.toString())
+      }
+    }
+
+    // https://dev.to/adamcollier/adding-codemirror-6-to-a-react-project-36hl
+
+    const editor = useRef()
+    window.cmEditor = editor
+
+    useEffect(() => {
+      const startState = EditorState.create({
+        doc: code,
+        extensions: [
+          basicSetup,
+          keymap.of([defaultKeymap, indentWithTab]),
+          javascript(),
+          EditorView.updateListener.of(onUpdate), // TODO callbacks like `setCode` all come from 1st render
+        ],
+      })
+
+      const view = new EditorView({ state: startState, parent: editor.current })
+      // TODO these execute after first code evaluation, so if editor code
+      // references cmView or calls WRITE etc. directly, it fails after reload.
+      window.cmView = view
+
+      return () => {
+        view.destroy()
+      }
+    }, [])
+
+    return html`<div className=${className} ref=${editor} />`
+  }
+
+  // --- Components for displaying eval results ---
+  var Inspect = ({ obj }) => {
+    const ref = useRef(null)
+    useEffect(() => {
+      // TODO: we're leaking Inspector instances on each render, is that OK?
+      const inspector = new Inspector(ref.current)
+      inspector.fulfilled(obj)
+    }, [])
+    return html`<div ref=${ref} />`
+  }
+
+  var DisplayResult = ({ evalResult, err }) => {
+    if (err) {
+      let text
+      if (err.stack.includes(err.name)) {
+        // Some browsers include `name` & `message` in `stack`
+        text = err.stack
+      } else {
+        text = `${err.name}: ${err.message}\n\n${err.stack}`
+      }
+
+      // TODO: line numbers in the stack are all off by `functionLineOffset` :-(
+
+      // Omit betterEvalFunction() and its callers from stack.
+      // (This also handles SyntaxError not having any useful stack.)
+      // Avoid cutting user's frames, even if user code happens to contain same name.
+      const cutPos = text.lastIndexOf('betterEvalFunction')
+      const userPosToProtect = text.lastIndexOf('evaluated-code')
+      if (cutPos >= 0 && cutPos > userPosToProtect) {
+        text = text.slice(0, cutPos)
+      }
+
+      return html`<div>
+        <h3>Exception:</h3>
+        <${ShowError}>${text}<//>
+      </div>`
+    }
+
+    // React cares about functional vs. class component https://overreacted.io/how-does-react-tell-a-class-from-a-function/
+    // but we don't, and as it happens in JS a class is just a 'function' with .prototype.
+    const mayBeComponent = typeof evalResult === 'function'
+
+    const mayBeNode = (x) => {
+      if (x instanceof Array) {
+        return x.some(mayBeNode)
+      }
+      // htm doesn't care how VDOM elements are represented; it's up to preact:
+      // https://preactjs.com/guide/v10/api-reference/#h--createelement
+      return (
+        typeof x === 'object' &&
+        typeof x['type'] === 'string' &&
+        typeof x['props'] === 'object'
+      )
+    }
+
+    return html`<div class="result">
+      <table>
+        <tr>
+          ${mayBeComponent && html`
+            <th>As a React component:</th>
+          `}
+          <th>As a node:</th>
+          <th>As object:</th>
+        </tr>
+        <tr>
+          ${mayBeComponent && html`
+            <td class="result-presentation component">
+              <div>
+                <${ErrorBoundary}>
+                  <${evalResult} />
+                <//>
+              </div>
+            </td>
+          `}
+          <td class="result-presentation node">
+            <div>
+              <${ErrorBoundary}>
+                ${evalResult}
+              <//>
+            </div>
+          </td>
+          <td class="result-presentation inspector">
+            <${Inspect} obj=${evalResult} />
+          </td>
+        </tr>
+      </table>
+    </div>`
+  }
+
+  var ShowError = ({ children }) =>
+    // TODO: linkify line:column
+    html`<div style=${{ whiteSpace: 'pre-wrap', textAlign: 'left', fontFamily: 'monospace', color: '#a00' }}>
+      ${children}
+    </div>`
+
+  class ErrorBoundary extends Component {
+    state = {}
+
+    componentDidCatch(error, info) {
+      this.setState({ error: error.toString(), componentStack: info?.componentStack })
+      console.warn(this.state)
+    }
+
+    render() {
+      const { error, componentStack } = this.state
+      if (error) {
+        return html`<${ShowError}>
+            ${error}
+            ${componentStack}
+          <//>`
+      }
+
+      return this.props.children
+    }
+  }
+
+  const loadUrl = new URLSearchParams(location.search).get('load')
+  var localStorageId = new URLSearchParams(location.search).get('id') || loadUrl || 'code'
+  console.log('localStorage from id:', localStorageId, 'got:', localStorage.getItem(localStorageId))
+  // Deliberately not distinguishing null from previously stored empty string.
+  // So deleting all code + reload is a way to get demoCode back.
+  var code = localStorage.getItem(localStorageId) || demoCode
+  if (loadUrl) {
+    console.log('fetching:', loadUrl)
+    fetch(loadUrl).then(response => {
+      response.text().then(text => {
+        if (!response.ok) {
+          throw new Error(`fetching \`${loadUrl}\`: HTTP ${response.status} ${response.statusText}`);
+        }
+        // TODO can overwrite user's work unconditionally!
+        render(html`<${EditEvalRenderLoop} initialCode=${text} localStorageId=${localStorageId} />`, document.body)
+      }).catch(reason => {
+        code = '/*\n' + reason.toString() + '\n*/\n\n' + code
+        render(html`<${EditEvalRenderLoop} initialCode=${code} localStorageId=${localStorageId} />`, document.body)
+      })
+    })
+  } else {
+    render(html`<${EditEvalRenderLoop} initialCode=${code} localStorageId=${localStorageId} />`, document.body)
+  }
+</script>
