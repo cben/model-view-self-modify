@@ -180,7 +180,8 @@ However, **Excel**'s surface layer is unidirectional dataflow (barring cycles [^
    (Initially I thought time travel will be a feature of the IDE, stopping execution early.  But the execution I want cut short is just deriving the model; the View logic should still run _after_ that, and the IDE doesn't know which code does what.  Hence, the cheesy user-space implementation with a comment and/or early `return` statement.)
 
 3. Click [rotateR] [left] [right] [down] buttons to play from that moment.
-4. Put cursor inside `RCSet([...])` in `newGame` function.  Start clicking board cells to mark them occupied.
+4. Enable "Gravity" checkbox above the board to enable pieces descending after 1 second if you make no move.
+5. Put cursor inside `RCSet([...])` in `newGame` function, or above in `shapes.I`, `shapes.J` etc. definition.  Start clicking board cells to mark them occupied.
 
 🖉🗃  If you want to edit freely, drop the `?load=...` from URL, otherwise your edits get overwritten on reload.
 You can append different `?id=...` to keep separate projects in browser localStorage.
