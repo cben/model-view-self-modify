@@ -60,15 +60,21 @@ Our languages encourage us to store user's work in runtime data structures (list
 but when process dies or code changes, we discover developer's work was durable,
 but user's work is lost — and we need a whole other toolbag (file I/O, serialization, pointer swizzling, networked storage APIs, databases, ORMs...) to tackle that 🤕.
 
-<img alt="diagram of user data being ephemeral by default, needing extra save/load code" src="2nd-class-user-work.svg" width="600">
+<img alt="diagram of user data being ephemeral by default, needing extra save/load code" src="substrates-2026/code-state-ui-serialization.excalidraw.svg" width="600">
 
-- TODO: redraw building on [Joshua Horowitz's visual language](https://joshuahhh.com/dims-of-feedback/)
+(I'm building on ["Dimensions of Feedback" visual language][Horowitz2024] [^Horowitz2024] but splitting runtime state arising from source from user-visible feedback.)
 
 That creates perverse incentive against **fine-grained** mixing of software use & modification/automation.
 Even as experienced programmer running 100% open source OS, I'd rather keep my exact state as a user than use my superpowers if that means restarting the process!  The contexts where I do mix them, routinely & fearlessly, are: (1) browser devtools to tweak layout/styling — even if those tweaks won't persist (2) shell prompt, where use is always already textual — and code is frequently disposable (yet retrievable from shell history).
 
-LISPs, Smalltalk, Self famously lift code into runtime data structures, on equal footing with user's work (allowing orthogonal persistence as a single "image").  
+LISPs, Smalltalk, Self famously lift code into runtime data structures, on equal footing with user's work (allowing orthogonal persistence as a single "image"):
+
+<img alt="diagram of code lifted into runtime state, allowing combined code+data persistence" src="substrates-2026/code-state-ui-SmallTalk.excalidraw.svg" width="600">
+
 Here I'm unifying in the other direction, lowering both to textual code (**the code is the substrate**) - this direction is _under-explored_!  
+
+<img alt="diagram of user data lowered into source code, also allowing combined code+data persistence" src="substrates-2026/code-state-ui-self-modify.excalidraw.svg" width="600">
+
 Cf. also [^Brandon2023] on runtime code modification vs. legibility tradeoffs (his takeaway is keeping source/data separation & mitigating issues by specific language design; but the frank discussion of cognitive difficulties understanding live systems is rare and interesting).
 
 ### 3. Challenge: Schema evolution NOT solved, though cognitively flattened
@@ -290,6 +296,10 @@ Even in single-user setting injecting data as code is bug-prone.  TODO: My curre
 [^badformer2023]: [badformer2023] _Retro-gaming in Typst. Reach the goal and complete the mission._ game (https://typst.app/universe/package/badformer/)
 
 [^soviet-matrix2024]: [soviet-matrix2024]  YouXam  & contributors, _Tetris game in Typst_ (https://github.com/YouXam/soviet-matrix)
+
+[^Horowitz2024]: [Horowitz2024] Joshua Horowitz, Technical Dimensions of Feedback in Live Programming Systems (https://joshuahhh.com/dims-of-feedback/), LIVE 2024
+
+[Horowitz2024]: https://joshuahhh.com/dims-of-feedback/
 
 [^Brandon2023]: Jamie Brandon, _no strings on me_ (https://www.scattered-thoughts.net/writing/there-are-no-strings-on-me/)
 
