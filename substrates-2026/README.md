@@ -14,7 +14,7 @@ Representing user actions as source code modification is an under-explored appro
 In the current naive form the idea is roughly **language-agnostic** I built a JavaScript live coding environment to play with it.  (But extending it would depend more, see sections 9—11.)  
 Here is a minimal example (https://cben.github.io/model-view-self-modify/substrates-2026/editor.html?load=counter.js):
 
-<iframe src="substrates-2026/editor.html?load=counter.js" width=1400 height=600></iframe>
+<iframe src="substrates-2026/editor.html?load=counter.js" width=1400 height=620></iframe>
 
 1. Try clicking [increment] [decrement].  User actions `WRITE(...)` computation steps into the source, which is **immediately** re-run and UI is updated.
    (I'm using UPPERCASE names for source-handling helpers)
@@ -180,7 +180,8 @@ However, **Excel**'s surface layer is unidirectional dataflow (barring cycles [^
    (Initially I thought time travel will be a feature of the IDE, stopping execution early.  But the execution I want cut short is just deriving the model; the View logic should still run _after_ that, and the IDE doesn't know which code does what.  Hence, the cheesy user-space implementation with a comment and/or early `return` statement.)
 
 3. Click [rotateR] [left] [right] [down] buttons to play from that moment.
-4. Put cursor inside `RCSet([...])` in `newGame` function.  Start clicking board cells to mark them occupied.
+4. Enable "Gravity" checkbox above the board to enable pieces descending after 1 second if you make no move.
+5. Put cursor inside `RCSet([...])` in `newGame` function, or above in `shapes.I`, `shapes.J` etc. definition.  Start clicking board cells to mark them occupied.
 
 🖉🗃  If you want to edit freely, drop the `?load=...` from URL, otherwise your edits get overwritten on reload.
 You can append different `?id=...` to keep separate projects in browser localStorage.
@@ -228,14 +229,14 @@ One of the reviewers asked about Tetris shape descending down on a **timer**.  I
 4. Confusingly, you want `setTimeout()` not `setInterval()` to avoid an avalanche.  The timeout handler executes once => modifies source => source runs again => installs a new handler.
 5. I wanted every code run (e.g. due to manual action by user) to cancel any outstanding timer, but doing that required stashing its handle in global state, breaking out of the simple model that every run is isolated:
     ```js
-  if (window.activeTimeout) { // KLUDGE: from a *previous* run!
-    clearTimeout(window.activeTimeout)
-    window.activeTimeout = undefined
-  }
-  if (gravity) {
-    // KLUDGE: Persist for next run
-    window.activeTimeout = setTimeout(() => { here.WRITE(`  model = down(model)\n`) }, 1000)  
-  }
+    if (window.activeTimeout) { // KLUDGE: from a *previous* run!
+      clearTimeout(window.activeTimeout)
+      window.activeTimeout = undefined
+    }
+    if (gravity) {
+      // KLUDGE: Persist for next run
+      window.activeTimeout = setTimeout(() => { here.WRITE(`  model = down(model)\n`) }, 1000)  
+    }
     ```
 
 ⚠ As reviewer 2 notes, these are difficulties wrt. environmental state (DOM handles, OS handles, closures...) and indeed SmallTalk-style object graphs handle these easier than flat text.  
