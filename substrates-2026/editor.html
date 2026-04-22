@@ -200,6 +200,7 @@
 
   var EditEvalRenderLoop = (props) => {
     const [code, setCode] = useState(props.initialCode)
+    const [pause, setPause] = useState(false)
 
     const saveCode = (code) => {
       console.log('saveCode to id:', props.localStorageId)
@@ -209,19 +210,28 @@
 
     // If code uses `yield` to return multiple UIs, it's possible for some to succeed but one raise exception.
     var evalResults = [] // each item is either { result } or { err }
-    try {
-      console.log('Evaluating...')
-      const iterator = betterEvalFunction(code)
-      // for..of would not collect a final `return`, so call `.next()` ourselves.
-      while (true) {
-        const item = iterator.next()
-        evalResults.push({ result: item.value })
-        // Treating final `return` same as last `yield`.  TODO: trailing `undefined` if no return.
-        if (item.done)
-          break
+    if (pause) {
+      console.log('Paused, not evaluating.')
+      // TODO: retain previous results, greyed out
+      // TODO: empty [] causes huge margin above
+      evalResults = [{ result: 'PAUSED' }]
+    } else {
+      try {
+        console.log('Evaluating...')
+        const iterator = betterEvalFunction(code)
+        // for..of would not collect a final `return`, so call `.next()` ourselves.
+        while (true) {
+          const item = iterator.next()
+          evalResults.push({ result: item.value })
+          // Treating final `return` same as last `yield`.  TODO: trailing `undefined` if no return.
+          if (item.done)
+            break
+        }
+      } catch (err2) {
+        evalResults.push({ err: err2 })
       }
-    } catch (err2) {
-      evalResults.push({ err: err2 })
+      // help debugging this display in browser console
+      window.evalResults = evalResults
     }
     // help debugging this display in browser console
     window.evalResults = evalResults
@@ -231,7 +241,13 @@
     return html`
       <table>
         <td>
-          <h3>Source code:</h3>
+          <h3>
+            Source code:
+            <span style="float: right">
+              <input id="pause" type="checkbox" checked=${pause} onChange=${event => setPause(event.target.checked)} />
+              <label for="pause">Pause execution</label>
+            </span>
+          </h3>
           <${Editor}
             code=${code} setCode=${saveCode}
           />
@@ -241,7 +257,7 @@
           </p>
         </td>
         <td>
-          <div class="results">
+          <div class="results ${pause ? 'pause' : ''}">
             ${evalResults.map(({ result, err }) =>
               html`<${ErrorBoundary}
                 key=${code /*force ErrorBoundary reset after edit (TODO: reduce excessive remounts?)*/}
