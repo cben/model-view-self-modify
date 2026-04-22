@@ -181,13 +181,13 @@ var View = ({ model, where }) => {
     }/>
     <a href="#" onClick=${where.JUMP}>👈 History</a>
     <button disabled=${!rotateRight || rotateRight(model).lastMoveInvalid}
-            onclick=${() => where.WRITE('model = rotateRight(model)\n')}>rotateR</button>
+            onclick=${() => where.WRITE('  model = rotateRight(model)\n')}>rotateR</button>
     <button disabled=${!left || left(model).lastMoveInvalid}
-            onClick=${() => where.WRITE('model = left(model)\n')}>left</button>
+            onClick=${() => where.WRITE('  model = left(model)\n')}>left</button>
     <button disabled=${!right || right(model).lastMoveInvalid}
-            onClick=${() => where.WRITE('model = right(model)\n')}>right</button>
+            onClick=${() => where.WRITE('  model = right(model)\n')}>right</button>
     <button disabled=${!down || down(model).lastMoveInvalid}
-            onClick=${() => where.WRITE('model = down(model)\n')}>down</button>
+            onClick=${() => where.WRITE('  model = down(model)\n')}>down</button>
   </div>`
 }
 // yield View(newGame())
@@ -287,52 +287,73 @@ var rotateRight = model => {
 
 // GAME HISTORY
 
-model = newGame()
+var game1 = () => {
+  model = newGame()
 
-model = right(model)
-model = right(model)
-model = right(model)
-model = right(model)
-model = down(model)
-model = down(model)
-model = rotateRight(model)
-model = rotateRight(model)
-model = right(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = right(model)
-model = down(model)
-model = rotateRight(model)
-model = rotateRight(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-model = down(model)
-here = LINE_START(HERE()) /* -- TIME TRAVEL: use Alt+Up / Alt+Down to move this line ---
-model = down(model)
-*/
+  model = right(model)
+  model = right(model)
+  model = right(model)
+  model = right(model)
+  model = down(model)
+  model = down(model)
+  model = rotateRight(model)
+  model = rotateRight(model)
+  model = right(model)
+  model = down(model)
+  return { model, where: LINE_START(HERE()) } /* -- TIME TRAVEL: use Alt+Up / Alt+Down to move this line ---
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = right(model)
+  model = down(model)
+  model = rotateRight(model)
+  model = rotateRight(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  model = down(model)
+  */
+}
+
+var { model, where } = game1()
+
 yield model  // because you can!  for debugging
 
+// A way to stop automatic edits:
+gravity = false
+yield html`<input onChange=${event => LINE_START(HERE()).WRITE(`gravity = ${event.target.checked}\n`)}
+                  id="gravity" type="checkbox" checked=${gravity} />
+           <label for="gravity"><h3>Gravity</h3></label>`
+
+if (window.activeTimeout) {
+  clearTimeout(window.activeTimeout)
+  window.activeTimeout = undefined
+}
+if (gravity) {
+  window.activeTimeout = setTimeout(() => { here.WRITE(`model = down(model)\n`) }, 1000)  
+}
+
+
 // Any of these forms should render:
-return View({ model, where: here })  // 👈 best stacktraces
+return View({ model, where })  // 👈 best stacktraces
 
-// return () => View({ model, where: here })
+// return () => View({ model, where })
 
-// return html`<${View} model=${model} where=${here}/>`
+// return html`<${View} model=${model} where=${where}/>`
 
-// class App extends Component { render = () => View({ model, where: here }) }
+// class App extends Component { render = () => View({ model, where }) }
 // return App
