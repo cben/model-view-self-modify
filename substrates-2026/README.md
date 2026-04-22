@@ -14,7 +14,7 @@ Representing user actions as source code modification is an under-explored appro
 
 <iframe src="substrates-2026/editor.html?load=counter.js" width=1400 height=450></iframe>
 
-1. Try clicking [increment] [decrement].  User actions `WRITE(...)` computation steps into the source, which is immediately re-run and UI is updated.
+1. Try clicking [increment] [decrement].  User actions `WRITE(...)` computation steps into the source, which is **immediately** re-run and UI is updated.
    (I'm using UPPERCASE names for source-handling helpers)
 2. Click [Create counter], observe how now each counter can be inc/decremented separately.
 
@@ -22,7 +22,7 @@ Representing user actions as source code modification is an under-explored appro
 
 I'm excited about it for 2 reasons:
 1. Cognitive simplicity: It requires grokking only one concept of change for code & data evolution, and it doesn't force one above the other.
-2. By implementing ["Always Already Programming"](https://gist.github.com/melaniehoff/95ca90df7ca47761dc3d3d58fead22d4) literally, it is conductive to [blurring the boundaries](https://joshuahhh.com/paper-plateau-2026-blurry/) between language/env authors | developer | end-user.
+2. By implementing ["Always Already Programming"][Hoff2020] [^Hoff2020] literally, it is conductive to [blurring the boundaries][Horowitz2026] [^Horowitz2026] between language/env authors | developer | end-user.
 
 There are obvious concerns including ⚠security, scalability, and software updates.  Yet if you want to build malleable, bi-directional, home-cooked, end-user-empowering experiences, I propose this is a fruitful starting point.
 
@@ -32,23 +32,21 @@ A counter could also be implemented by over-writing `var model = 0` to become `=
 
 - Non-destructive, easier to clean up after shooting yourself in the foot.
 - Capturing your actions in text is a gateway to programming [by demonstration].
-- It smuggles advanced-but-somewhat-mainstream practices like MVU/redux and [event sourcing](https://martinfowler.com/eaaDev/EventSourcing.html) into "muggle" hands 😈. It enables fun workflows notably live reload and [time traveling debugging](https://elm-lang.org/news/time-travel-made-easy).
+- It smuggles advanced-but-somewhat-mainstream practices like MVU/redux and [event sourcing][Fowler2005] [^Fowler2005] into "muggle" hands 😈. It enables fun workflows notably live reload and [time traveling debugging][James2014] [^James2014].
 
-Compare to **"Model-View-Update" architecture** popularized by [Elm](https://elmprogramming.com/model-view-update-part-1.html) / [Redux](https://redux.js.org/tutorials/fundamentals/part-2-concepts-data-flow):  
+Compare to **"Model-View-Update" architecture** popularized by [Elm][Poudel2021] [^Poudel2021] / [Redux][Redux2024] [^Redux2024]:  
 app state is immutable ("Model" / "store"), View renders UI as a pure function of state,  
-user actions are [defunctionalize][]d into pure data e.g. `{ type: "rotateRight" }`,  
+user actions are [defunctionalized][Koppel2019] [^Koppel2019] into pure data e.g. `{ type: "rotateRight" }`,  
 and "Update" / "reducer" function dispatches on (action, old model) → to compute new model.
 
-[defunctionalize]: https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
-
-The difference here is we represent the same user intent as code e.g. `model = rotateRight(model)`, not data, and actually append them in designated  place(s) in app code. (see "Where" section below)  
+The difference here is we represent the same user intent as code e.g. `model = rotateRight(model)`, not data, and actually append them in designated  place(s) in app code. (see "Where" section below)
 Bi-directionality here is not some "magical" output->source inference, you write explicit UI code that generates source pieces. You can encapsulate it in components, not unlike React+Redux.
 
-Prior Art: colorForth [magenta variables](http://www.euroforth.org/ef03/oakford03.pdf) are over-writable pointers into code. [James Vaughan](https://jamesbvaughan.com/bidirectional-editing/) and [Jason McGhee](https://news.ycombinator.com/item?id=44437770) shared several projects that overwrite, which are also interesting for using Language Server Protocol to de-couple execution from a specific editor.  
+**Prior Art**: colorForth [magenta variables][Oakford2003] [^Oakford2003] are over-writable pointers into code.  This was lower level (can store 1 machine word unless you start doing pointer arithmetic?) but allowed persisting (some) state in the source.
 
-Typst aspires to be a better TeX, designed for fast incremental rendering.  Typst creators used appending to make "interactive" games [icicle](https://typst.app/universe/package/icicle/) & [badformer](https://typst.app/universe/package/badformer/), where user types a sequence of WASD letters & document is re-rendered each time.  Also picked up in community [soviet-matrix package](https://github.com/YouXam/soviet-matrix) implementating Tetris.
+[^Vaughan2025] and [^McGhee2025] shared several projects that overwrite, which are also interesting for using Language Server Protocol to de-couple execution from a specific editor.
 
-I consider PhotoShop layers to be a grand success in showing the public they can be more productive manipulating a *recipe* than directly manipulating the final result.  I've used several EDA software translating menu actions to statements in a Tcl console.  Replayable Dockerfiles brought reproducibility to many more devs.  I want more of these!
+Typst aspires to be a better TeX, designed for fast incremental rendering.  Typst creators used appending to make "interactive" games [^icicle2023] & [^badformer2023], where user types a sequence of WASD letters & document is re-rendered each time.  Also picked up in community [^soviet-matrix2024] implementating Tetris.  These are an almost exact implementation of Model-View-Self-modify! (except Typst has no concept of UI action binding, so they had to use single letters)
 
 The core idea is so simple that I'm sure more people independently discovered it before, but I'm not aware of an agreed-upon term; I hope "Model View Self-Modify" name might stick by comparison to well-understood MVU?
 
@@ -59,72 +57,74 @@ but when process dies or code changes, we discover developer's work was durable,
 but user's work is lost — and we need a whole other toolbag (file I/O, serialization, pointer swizzling, networked storage APIs, databases, ORMs...) to tackle that 🤕.
 
 <img alt="diagram of user data being ephemeral by default, needing extra save/load code" src="2nd-class-user-work.svg" width="600">
-- TODO: redraw building on [Joshue Horowitz's visual language](https://joshuahhh.com/dims-of-feedback/)
 
-That creates perverse incentive against fine-grained mixing of software use & modification/automation.  
+- TODO: redraw building on [Joshua Horowitz's visual language](https://joshuahhh.com/dims-of-feedback/)
+
+That creates perverse incentive against **fine-grained** mixing of software use & modification/automation.
 Even as experienced programmer running 100% open source OS, I'd rather keep my exact state as a user than use my superpowers if that means restarting the process!  The contexts where I do mix them, routinely & fearlessly, are: (1) browser devtools to tweak layout/styling — even if those tweaks won't persist (2) shell prompt, where use is always already textual — and code is frequently disposable (yet retrievable from shell history).
 
-LISPs, Smalltalk, Self famously put code & user's work on equal footing in a single persistent "image" of data structures.  
-Here I'm unifying in the other direction, storing both as textual code - this direction is _under-explored_!  
-Cf. also Jamie Brandon's [no strings on me](https://www.scattered-thoughts.net/writing/there-are-no-strings-on-me/) on runtime state vs. legibility tradeoffs.
+LISPs, Smalltalk, Self famously lift code into runtime data structures, on equal footing with user's work (allowing orthogonal persistence as a single "image").  
+Here I'm unifying in the other direction, lowering both to textual code (**the code is the substrate**) - this direction is _under-explored_!  
+Cf. also [^Brandon2023] on runtime code modification vs. legibility tradeoffs (his takeaway is keeping source/data separation & mitigating issues by specific language design; but the frank discussion of cognitive difficulties understanding live systems is rare and interesting).
 
 ### Challenge: Schema evolution NOT solved, though cognitively flattened
 
-[Cambria](https://www.inkandswitch.com/cambria/) and [Subtext](https://www.subtext-lang.org/) attack a hard problem:
+[Cambria][LHH2023] [^LHH2023] and [Subtext][Edwards2025] [^Edwards2025] attack a hard problem:
 
-> For example, many live programming techniques treat state as ephemeral and recreate it after every edit, but when the shape of longer-lived state changes then the illusion of liveness is shattered – hot reloading works until it doesn’t. — https://arxiv.org/pdf/2412.06269
+> For example, many live programming techniques treat state as ephemeral and recreate it after every edit, but when the shape of longer-lived state changes then the illusion of liveness is shattered – hot reloading works until it doesn’t. [^EPSL2024]
 
 I punt on that hard problem and expect user=dev resolve conflicts, just in a conceptually simple way.
 
 Consider event-sourcing DB migration changing the format of past events, or a refactor changing Redux actions structure, invalidating the recorded history. Fixing those requires thinking of both "code change" and "action on data" concepts at once :-/
 In Redux devtools, you could download the actions log as JSON, process, and load new actions; it's tedious and in my dev experience I used to just discard the log.
-    
-In this self-modify paradigm you get same issues — but _history is regular code_, so regular "debug / refactor after an API change" skills apply!  
+
+In this self-modify paradigm you get same issues — but _history is regular code_, so regular "debug / refactor after an API change" skills apply!
 (Including the option of making API backward-compatible)
 
 ## Why: Reduce barriers between app "end user" / developer
 
-First, note the live environment responsible for re-evaluating code upon every change and rendering the result is no longer a "dev tool" — it's now essential part of the app **runtime**.  
+First, note the live environment responsible for re-evaluating code upon every change and rendering the result is no longer a "dev tool" — it's now essential part of the app **runtime**.
 (Distributing dev env to ALL users may feel weird in compiler circles, but is 100% normal in Excel circles.)
 
 The source could be hidden by default, but it does give user some powers!  First, undo/redo for free.
 
 - Is time-travel debugging important for end-users?  I think it varies by domain.  
-  For example, if your "program" is algebraic chess notation, these were being published in journals for the sole purpose of "users" replaying them step-by-step (on wooden boards — that language got standardized before computers were invented!) to look for "bugs" & "fixes" during "execution"   😉
+  For example, if your "program" is algebraic chess notation, these were being published in journals for the sole purpose of "users" replaying them step-by-step (on wooden boards — that language got standardized before computers were invented!) to look for "bugs" & "fixes" during "execution" 😉
 
-Prior Art: Graphite.rs image editor has [language-centric architecture](https://www.youtube.com/watch?v=ZUbcwUC5lxA), IIUC any direct manipulation creates re-playable scene graph nodes that are exposed to user.
+Prior Art: I consider PhotoShop layers to be a grand success in showing the public they can be more productive manipulating a *recipe* than directly manipulating the final result.  
+Graphite.rs image editor doubles down on a language-centric architecture [^Graphite2025], IIUC any direct manipulation creates re-playable scene graph nodes that are exposed to user.
 
 ## Why: Reduce barriers between app developer / IDE developer
 
-If user-facing UI actually edits/inserts code, same skills translate to developer making mini-UIs for themself!  
+If user-facing UI actually edits/inserts code, same skills translate to developer making mini-UIs for themself!
 
 - TDD helpers: visualize pass/fail/rich results, buttons to `JUMP()` to test's code:
   https://cben.github.io/model-view-self-modify/substrates-2026/editor.html?load=test-helpers.js
 
-- _Help yourself_ to [Babylonian-style Programming](https://arxiv.org/abs/1902.00549) without hard-wired IDE support?  Call a function, render the results.  Write examples as part of the language, not special metadata.
+- _Help yourself_ to [Babylonian-style Programming][RRRLH2019] [^RRRLH2019] without hard-wired IDE support?  Call a function, render the results.  Write examples as part of the language, not special metadata.
 
 - Literate/notebook helpers?  Below in Tetris example, the code & outputs became long and I added `H1()`, `H2()` functions that render a large heading and sync cursor to source location.
 
 - Level/asset editors.  Below in Tetris example, I express the tetraminoes as arrays e.g.
   ```
-  [1,0], [1,1], [1,2], [1,3], 
+  [1,0], [1,1], [1,2], [1,3],
   ```
   When rendering boards, I've wired all cells to (1) show coordinates (2) insert coordinates at cursor when clicked.  This allowed me to "draw" the shapes by clicking.
 
-  Prior art: [livelits](https://doi.org/10.1145/3462276) render custom UIs inline in code.  
+  Prior art: [livelits][OMBVCC2021] [^OMBVCC2021] render custom UIs inline in code.
   Can we say here we have "poor man's livelits", only rendering side-by-side with code? Still useful.
 
 TODO: This is an area I hope to explore more, e.g. [moldable inspectors](https://scg.unibe.ch/archive/masters/Kauf18a.pdf), a GUI builder, number/color scrubbers...
 
-Prior Art: [mage: Fluid Moves Between Code and Graphical Work in Computational Notebooks](https://marybethkery.com/projects/Verdant/mage.pdf) prototyped a Jupyter extension that allows UI user actions to edit back the cell's code.
+Prior Art: [mage][KRHMWP2020] [^KRHMWP2020] prototyped a Jupyter extension that allows UI user actions to edit back the cell's code.  Unfortunately their code doesn't seem published(?), but the goal was specifically helping "tool builders" to enrich Jupyter with UI->code tools. (Simple usage appends user actions, though they include a more advanced API for overwriting.)  
+However, they approach code->UI sync by the tool _parsing_ cell code; this is less general, and implies some separation of "tool" code — whereas I celebrate ability of arbitrary "user-land" code to generate UI.
 
 ## Why: internal/external DSL perspective
 
-> By admitting input, a program acquires a control language by which a user can guide the program through a maze of possibilities.  
-> — [Chuck Moore](http://forth.org/POL.pdf) (for particular definition of "input")
+> By admitting input, a program acquires a control language by which a user can guide the program through a maze of possibilities. [^Moore2011] (for particular definition of "input")
 
-The redux append-only log of user actions _is_ code, in an _app-specific language_.  
-The pattern-matching we do in Update / reducer functions _is_ an explicit interpreter for an "external DSL":
+The redux append-only log of user actions _is_ code, in an _app-specific language_.
+The pattern-matching we do in MVU update/reducer functions _is_ an explicit interpreter for an "external DSL":
 ```js
 ... onclick="dispatch({ type: 'rotateRight' })" ...
 
@@ -132,13 +132,14 @@ switch (action.type) {
    case 'rotateRight': ...
 ```
 
-which adds ceremony & cognitive load.
-
 The architecture I propose here is an "internal DSL" alternative.
 Supported actions are written as regular Model → Model functions; you chain them using regular function call syntax.
 
-Prior Art: VisiCalc's original save format was [a series of keystrokes](https://rmf.vc/ImplementingVisiCalc#:~:text=We%20saved%20the%20spreadsheet%20in%20a%20format%20that%20allowed%20us%20to%20use%20the%20keyboard%20input%20processor%20to%20read%20the%20file%2E) replaying which would re-create the spreadsheet.  That's more of an internal hack, [less suitable](https://www.gnu.org/software/emacs/emacs-paper.html#SEC11) as a stable language, and they did later introduce an [interchange format](https://archive.org/details/bitsavers_visicorpDISpecification1981_745801/).  
-Converting user input to source code with descriptive function names is a step better.  Long-term interchange is still tied to the host language and still depends on whether you can keep a stable "API".
+The reduction in ceremony is pleasant to me but minor; I'm more interested in this shift because it makes UI actions & programming _look_ similar, and encourages free inter-mixing (as internal DSLs tend to do).
+
+It also reveals a guiding principle for building with this architecture: Beside black-box functionality, assume user will read&edit the produced code! => **Optimize APIs for making sense to the user**.
+E.g. is `rotateRight(model)` a good function?  Yes _iff_ it matches how the user would call it.  Hmm perhaps `rotateRight(game)` might be better 🤔.
+
 
 ## Where: One vs. Multiple writable pointers into source
 
@@ -150,8 +151,8 @@ To support both, I extended the self-modification API with objects that represen
 
 (At this point I had to admit the architecture is not purely functional.  Yes, *technically* you can lift all mutation out of _language_ semantics into _IDE_ — every change results in running a brand new program.  But the system feel is of passing around handles to effectively mutable state, making their indentity matter.)
 
-Prior art: My attempts to google ideas like "purely functional self-modifying code" led nowhere, what with self-modifying code being shunned even in imperative circles for _being hard to reason about_ :-)  
-However, **Excel**'s surface layer is unidirectional dataflow (barring [cycles](https://youtu.be/5rg7xvTJ8SU?t=91)).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel lets user fully edit the spreadsheet you got after invoking macros.
+Prior art: My attempts to google ideas like "purely functional self-modifying code" led nowhere, what with self-modifying code being shunned even in imperative circles for _being hard to reason about_ :-)
+However, **Excel**'s surface layer is unidirectional dataflow (barring cycles [^Inkbox2024]).  Turning a spreadsheet into "interactive app" may require macros, which can bind actions to editing cells & formulas.  It's up to user whether they'd use a strict append-only log of actions, but either way Excel lets user fully edit the spreadsheet you got after invoking macros.
 
 # Putting it all together: Tetris
 
@@ -174,8 +175,8 @@ The longer you interact, the longer the code gets, and UI responsiveness will de
 
 I'm hopeful incremental computation can help.  Don't re-run code from start, especially when appending near the end.  Feasibility of accurate dependency analisys depends on the language...
 
-- TODO: Perhaps it could be helped by user-provided dataflow structure, e.g. treating functions or notebook cells as separate editors?  Building on the Observablehq runtime, or Marimo could be nice.  
-  This might also form a middle ground between single append point and arbitrary pointers — only append at end of a function/cell/file?  
+- TODO: Perhaps it could be helped by user-provided dataflow structure, e.g. treating functions or notebook cells as separate editors?  Building on the Observablehq runtime, or Marimo could be nice.
+  This might also form a middle ground between single append point and arbitrary pointers — only append at end of a function/cell/file?
   Some granularity is also interesting for receiving updated software and "opening" your existing data with it...
 
 ## Challenge: Multi-player / security
@@ -186,4 +187,78 @@ I want to try it, but it may well be a dead end.  In particular, the free-form s
 
 Even in single-user setting injecting data as code is bug-prone.  TODO: My current `WRITE('string')` helper is risky, should add safe parametrization like in good DB query-building APIs.
 
-## Bibliography
+
+[^Hoff2020]: [Hoff2020] Melanie Hoff, _Always Already Programming_ (https://gist.github.com/melaniehoff/95ca90df7ca47761dc3d3d58fead22d4)
+
+[Hoff2020]: https://gist.github.com/melaniehoff/95ca90df7ca47761dc3d3d58fead22d4
+
+[^Horowitz2026]: [Horowitz2026] Joshua Horowitz, _The Blurry Boundaries Between Programming and Direct Use_ (https://joshuahhh.com/paper-plateau-2026-blurry/), PLATEAU 2026 workshop
+
+[Horowitz2026]: https://joshuahhh.com/paper-plateau-2026-blurry/
+
+[^Fowler2005]: [Fowler2005] Martin Fowler, _Event Sourcing_ (https://martinfowler.com/eaaDev/EventSourcing.html)
+
+[Fowler2005]: https://martinfowler.com/eaaDev/EventSourcing.html
+
+[^James2014]: [James2014] Michael James, _Time Travel made Easy — Introducing Elm Reactor_ (https://elm-lang.org/news/time-travel-made-easy)
+
+[James2014]: https://elm-lang.org/news/time-travel-made-easy
+
+[^Poudel2021]: [Poudel2021] Pawan Poudel, _Beginning Elm_, section 5.2 _Model View Update - Part 1_ (https://elmprogramming.com/model-view-update-part-1.html)
+
+[Poudel2021]: https://web.archive.org/web/20251024093047/https://elmprogramming.com/model-view-update-part-1.html
+
+[^Redux2024]: [Redux2024] Mark Erikson & contributors, _Redux Fundamentals, Part 2: Concepts and Data Flow_ (https://redux.js.org/tutorials/fundamentals/part-2-concepts-data-flow)
+
+[Redux2024]: https://web.archive.org/web/20260412025856/https://redux.js.org/tutorials/fundamentals/part-2-concepts-data-flow
+
+[^Koppel2019]: [Koppel2019] Jimmy Koppel, _The Best Refactoring You've Never Heard Of_ (https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html), Compose 2019 talk
+
+[Koppel2019]: https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
+
+[^Oakford2003]: [Oakford2003] Howerd Oakford, The colorForth Magenta Variable (http://www.euroforth.org/ef03/oakford03.pdf), EuroForth 2003
+
+[Oakford2003]: http://www.euroforth.org/ef03/oakford03.pdf
+
+[^Vaughan2025]: [Vaughan2025] James Vaughan, _Code⇄GUI bidirectional editing via LSP_ (https://jamesbvaughan.com/bidirectional-editing/)
+
+[^McGhee2025]: [McGhee2025] Jason McGhee, Hacker News thread (https://news.ycombinator.com/item?id=44437770)
+
+[^icicle2023]: [icicle2023] _Help the Typst Guys reach the helicopter pad and save Christmas!_ game (https://typst.app/universe/package/icicle/)
+
+[^badformer2023]: [badformer2023] _Retro-gaming in Typst. Reach the goal and complete the mission._ game (https://typst.app/universe/package/badformer/)
+
+[^soviet-matrix2024]: [soviet-matrix2024]  YouXam  & contributors, _Tetris game in Typst_ (https://github.com/YouXam/soviet-matrix)
+
+[^Brandon2023]: Jamie Brandon, _no strings on me_ (https://www.scattered-thoughts.net/writing/there-are-no-strings-on-me/)
+
+[Brandon2023]: https://www.scattered-thoughts.net/writing/there-are-no-strings-on-me/
+
+[^LHH2023]: [LHH2023] Litt, Hardenberg, Henry, _Project Cambria — Translate your data with lenses_ (https://www.inkandswitch.com/cambria/)
+
+[LHH2023]: https://www.inkandswitch.com/cambria/
+
+[^Edwards2025]: [Edwards2025] _Subtext Retrospective_, summarizing 2004–2020 research (https://www.subtext-lang.org/retrospective.html)
+
+[Edwards2025]: https://www.subtext-lang.org/retrospective.html
+
+[^EPSL2024]: [EPSL2024] Edwards, Petricek, Storm, Litt, _Schema Evolution in Interactive Programming Systems_ (https://arxiv.org/pdf/2412.06269)
+
+[^Graphite2025]: [Graphite2025] Chambers, Kobert, _Rust-Powered Graphics Editor: How Graphite's Syntax Trees Revolutionize Image Editing_ (https://www.youtube.com/watch?v=ZUbcwUC5lxA), interview on Developer Voices podcast
+
+[^RRRLH2019]: [RRRLH2019] Rauch, Rein, Ramson, Lincke, Hirschfeld, _Babylonian-style Programming: Design and Implementation of an Integration of Live Examples into General-purpose Source Code_ (https://arxiv.org/abs/1902.00549)
+
+[RRRLH2019]: https://arxiv.org/abs/1902.00549
+
+[^OMBVCC2021]: [OMBVCC2021] Omar, Moon, Blinn, Voysey, Collins, Chugh. _Filling Typed Holes with Live GUIs_ (https://hazel.org/papers/livelits-pldi2021.pdf), PLDI 2021
+
+[OMBVCC2021]: https://hazel.org/papers/livelits-pldi2021.pdf
+
+[^KRHMWP2020]: [KRHMWP2020] Kery, Ren, Hohman, Moritz, Wongsuphasawat, Patel, _mage: Fluid Moves Between Code and Graphical Work in Computational Notebooks_ (https://dl.acm.org/doi/abs/10.1145/3379337.3415842), UIST 2020
+
+[KRHMWP2020]: https://dl.acm.org/doi/abs/10.1145/3379337.3415842
+
+[^Moore2011]: [Moore2011] Chuck Moore, _Programming a Problem-Oriented Language_ section 1.2 (http://forth.org/POL.pdf)
+
+[^Inkbox2024]: [Inkbox2024] Inkbox software, _I built my own 16-Bit CPU in Excel_ video (https://youtu.be/5rg7xvTJ8SU?t=91)
+
