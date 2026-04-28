@@ -335,16 +335,17 @@ yield model  // because you can!  for debugging
 
 // A way to stop automatic edits:
 gravity = false
-yield html`<input onChange=${event => LINE_START(HERE()).WRITE(`gravity = ${event.target.checked}\n`)}
-                  id="gravity" type="checkbox" checked=${gravity} />
-           <label for="gravity"><h3>Gravity</h3></label>`
+yield html`<fieldset><input onChange=${event => LINE_START(HERE()).WRITE(`gravity = ${event.target.checked}\n`)}
+                            id="gravity" type="checkbox" checked=${gravity} />
+    <label for="gravity">Gravity</label>
+  </fieldset>`
 
 if (window.activeTimeout) {
   clearTimeout(window.activeTimeout)
   window.activeTimeout = undefined
 }
 if (gravity) {
-  window.activeTimeout = setTimeout(() => { here.WRITE(`model = down(model)\n`) }, 1000)  
+  window.activeTimeout = setTimeout(() => { where.WRITE(`model = down(model)\n`) }, 1000)
 }
 
 
