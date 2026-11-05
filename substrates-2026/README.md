@@ -20,7 +20,7 @@ Here is a minimal example (https://cben.github.io/model-view-self-modify/substra
    (I'm using UPPERCASE names for source-handling helpers)
 2. Click [Create counter], observe how now each counter can be inc/decremented separately.
 
-🖉🗃  To edit your own code(s) and persist after reload, open [without `?load=` param](https://model-view-self-modify.netilify.app/?id=you_pick_whatever); each `?id=...` you pick is independent.
+🖉🗃  To edit your own code(s) and persist after reload, open [without `?load=` param](https://model-view-self-modify.netlify.app/?id=you_pick_whatever); each `?id=...` you pick is independent.
 
 I'm excited about it for 2 reasons:
 1. Cognitive simplicity: It requires grokking only one concept of change for code & data evolution, and it doesn't force one above the other.
