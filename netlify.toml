@@ -1,0 +1,2 @@
+[build]
+  command = "npm install; cd substrates-2026/; npm install"

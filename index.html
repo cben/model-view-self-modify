@@ -43,35 +43,35 @@
   }
 </style>
 
-<link rel="stylesheet" href="https://unpkg.com/@observablehq/inspector/dist/inspector.css" />
+<link rel="stylesheet" href="/node_modules/@observablehq/inspector/dist/inspector.css" />
 
 <script type="importmap">
   {
     "imports": {
-      "@codemirror/basic-setup": "https://unpkg.com/@codemirror/basic-setup/dist/index.js",
-      "@codemirror/autocomplete": "https://unpkg.com/@codemirror/autocomplete/dist/index.js",
-      "@codemirror/commands": "https://unpkg.com/@codemirror/commands/dist/index.js",
-      "@codemirror/language": "https://unpkg.com/@codemirror/language/dist/index.js",
-      "@codemirror/lang-javascript": "https://unpkg.com/@codemirror/lang-javascript/dist/index.js",
-      "@codemirror/lint": "https://unpkg.com/@codemirror/lint/dist/index.js",
-      "@codemirror/search": "https://unpkg.com/@codemirror/search/dist/index.js",
-      "@codemirror/state": "https://unpkg.com/@codemirror/state/dist/index.js",
-      "@codemirror/view": "https://unpkg.com/@codemirror/view/dist/index.js",
-      "@lezer/common": "https://unpkg.com/@lezer/common/dist/index.js",
-      "@lezer/highlight": "https://unpkg.com/@lezer/highlight/dist/index.js",
-      "@lezer/javascript": "https://unpkg.com/@lezer/javascript/dist/index.js",
-      "@lezer/lr": "https://unpkg.com/@lezer/lr/dist/index.js",
-      "@marijn/find-cluster-break": "https://unpkg.com/@marijn/find-cluster-break/src/index.js",
-      "@observablehq/inspector": "https://unpkg.com/@observablehq/inspector?module",
-      "htm": "https://unpkg.com/htm/dist/htm.mjs",
-      "preact": "https://unpkg.com/preact/dist/preact.mjs",
-      "preact/hooks": "https://unpkg.com/preact/hooks/dist/hooks.mjs",
-      "fdrandom": "https://unpkg.com/fdrandom",
-      "rand-seed": "https://unpkg.com/rand-seed/dist/es/index.js",
-      "seeded-rand": "https://unpkg.com/seeded-rand/dist/jsrand.js?module",
-      "style-mod": "https://unpkg.com/style-mod/src/style-mod.js",
-      "w3c-keyname": "https://unpkg.com/w3c-keyname/index.js",
-      "crelt": "https://unpkg.com/crelt/index.js"
+      "codemirror": "/node_modules/codemirror/dist/index.js",
+      "@codemirror/autocomplete": "/node_modules/@codemirror/autocomplete/dist/index.js",
+      "@codemirror/commands": "/node_modules/@codemirror/commands/dist/index.js",
+      "@codemirror/language": "/node_modules/@codemirror/language/dist/index.js",
+      "@codemirror/lang-javascript": "/node_modules/@codemirror/lang-javascript/dist/index.js",
+      "@codemirror/lint": "/node_modules/@codemirror/lint/dist/index.js",
+      "@codemirror/search": "/node_modules/@codemirror/search/dist/index.js",
+      "@codemirror/state": "/node_modules/@codemirror/state/dist/index.js",
+      "@codemirror/streamparser": "/node_modules/@codemirror/streamparser/dist/index.js",
+      "@codemirror/view": "/node_modules/@codemirror/view/dist/index.js",
+      "@lezer/common": "/node_modules/@lezer/common/dist/index.js",
+      "@lezer/highlight": "/node_modules/@lezer/highlight/dist/index.js",
+      "@lezer/javascript": "/node_modules/@lezer/javascript/dist/index.js",
+      "@lezer/lr": "/node_modules/@lezer/lr/dist/index.js",
+      "@marijn/find-cluster-break": "/node_modules/@marijn/find-cluster-break/src/index.js",
+      "@observablehq/inspector": "/node_modules/@observablehq/inspector/src/index.js",
+      "htm": "/node_modules/htm/dist/htm.mjs",
+      "preact": "/node_modules/preact/dist/preact.mjs",
+      "preact/hooks": "/node_modules/preact/hooks/dist/hooks.mjs",
+      "rand-seed": "/node_modules/rand-seed/dist/es/index.js",
+      "isoformat": "/node_modules/isoformat/src/index.js",
+      "style-mod": "/node_modules/style-mod/src/style-mod.js",
+      "w3c-keyname": "/node_modules/w3c-keyname/index.js",
+      "crelt": "/node_modules/crelt/index.js"
     }
   }
 </script>
@@ -83,16 +83,16 @@
   import { useEffect, useState, useRef } from 'preact/hooks'
   var html = htm.bind(h)
 
-  import { EditorState, basicSetup } from '@codemirror/basic-setup'
+  import { basicSetup } from 'codemirror'
   import { EditorView, keymap } from '@codemirror/view'
   import { SearchCursor, RegExpCursor } from "@codemirror/search"
-  import { findColumn } from '@codemirror/state'
+  import { EditorState, findColumn } from '@codemirror/state'
   import { defaultKeymap, indentWithTab } from '@codemirror/commands'
   import { javascript } from '@codemirror/lang-javascript'
 
   import { Inspector } from '@observablehq/inspector'
 
-  // -- Imports to be used by user code --
+  // -- Imports to be used by user code (TODO #20) --
 
   window.html = html
   window.Component = Component
@@ -103,7 +103,7 @@
   // import Srand from 'seeded-rand'
   // window.Srand = Srand
   // TODO: https://stackoverflow.com/questions/47978809/how-to-dynamically-execute-eval-javascript-code-that-contains-an-es6-module-re
-  import _ from 'https://unpkg.com/lodash-es'
+  import _ from '/node_modules/lodash-es/lodash.js'
   window._ = _
   window.RegExpCursor = RegExpCursor
 
