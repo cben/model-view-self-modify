@@ -1,0 +1,15 @@
+{
+  "name": "model-view-self-modify",
+  "version": "dev",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@observablehq/inspector": "^5.0.1",
+    "codemirror": "^6.0.2",
+    "htm": "^3.1.1",
+    "lodash-es": "^4.18.1",
+    "preact": "^11.1.1",
+    "rand-seed": "^3.0.0"
+  }
+}
