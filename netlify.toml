@@ -1,0 +1,4 @@
+[build]
+  # https://stackoverflow.com/a/54545546/239657 - Netlify deletes ./node_modules so must copy into separate publish dir if really want it 
+  command = "rm -rf dist/ && mkdir dist/ && rsync -rv ./ dist/ --exclude ./dist && cd dist/ && npm install && cd substrates-2026/ && npm install"
+  publish = "dist"
